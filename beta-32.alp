@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="beta-32" board="Alchitry Au" language="Lucid" version="3">
+  <files>
+    <src>timer.luc</src>
+    <src>ws2812b_writer.luc</src>
+    <src>game_fsm.luc</src>
+    <component>pipeline.luc</component>
+    <src>alu.luc</src>
+    <src>beta_cpu.luc</src>
+    <src>video_loader.luc</src>
+    <component>counter.luc</component>
+    <src>mux_2_xbit.luc</src>
+    <src>control_unit.luc</src>
+    <src>instruction_rom.luc</src>
+    <src>mux_2.luc</src>
+    <src>boolean.luc</src>
+    <src>status_led.luc</src>
+    <src>button_module.luc</src>
+    <component>reset_conditioner.luc</component>
+    <src>memory_unit.luc</src>
+    <component>button_conditioner.luc</component>
+    <src>mux_4_xbit.luc</src>
+    <src>full_adder.luc</src>
+    <component>simple_dual_ram.v</component>
+    <src>compare.luc</src>
+    <src>regfile_unit.luc</src>
+    <src>regfile_memory.luc</src>
+    <component>decoder.luc</component>
+    <src>pc_unit.luc</src>
+    <src>multiplier.luc</src>
+    <src>x_bit_right_shifter_arithmetic.luc</src>
+    <src>x_bit_right_shifter.luc</src>
+    <component>simple_ram.v</component>
+    <src>mux_4.luc</src>
+    <src>motherboard.luc</src>
+    <src>debug_module.luc</src>
+    <src>led_decoder.luc</src>
+    <src>x_bit_left_shifter.luc</src>
+    <component>edge_detector.luc</component>
+    <src>seven_seg.luc</src>
+    <src>led_mod.luc</src>
+    <src>shifter.luc</src>
+    <src top="true">au_top.luc</src>
+    <src>adder.luc</src>
+    <constraint>io.acf</constraint>
+    <constraint lib="true">alchitry.acf</constraint>
+    <constraint lib="true">au.xdc</constraint>
+  </files>
+</project>

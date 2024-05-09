@@ -1,0 +1,8 @@
+.=0x000
+test:
+
+.=0x400
+balls_info:
+
+.=0x800
+inputs:

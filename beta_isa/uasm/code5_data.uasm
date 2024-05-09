@@ -1,0 +1,26 @@
+.=0x00
+balls_info_rw:
+
+.=0x48
+players_pos_rw:
+
+.=0x4C
+test:
+
+.=0x58
+| Initial values need to be written before main program starts
+HEIGHT: LONG(15)
+WIDTH: LONG(30)
+PLAYER_LENGTH: LONG(5)
+MAX_AMMO: LONG(3)
+ISWIN: LONG(0)
+
+
+.=0x400
+balls_info:
+
+.=0x448
+players_pos: 
+
+.=0x800
+inputs:

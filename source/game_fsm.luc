@@ -1,0 +1,78 @@
+module game_fsm (
+  input clk,  // clock
+  input rst,
+  input io_button_values[12],
+  input timer[7],       // game timer; goes from 99 to 0
+  input game_clock[2], // ???
+  input end_game,       // signal raised by CPU when game is over
+  output fsm_state[2],  // Current application FSM state
+  output timer_done,    // whether game timer is zero; formerly zyx[1]
+  output in_gameplay,   // whether we are currently in gameplay; formerly zyx[2]
+  output game_tick     // game ticks; formerly zyx[0]
+) {
+  fsm gamestates(.clk(clk)) = {START,GAMEPLAY,GAMEOVER,DELAY};
+  dff difficulty(.clk(clk),.rst(rst));
+  dff reset_delay_counter[2] (.clk(clk),.rst(rst));
+  edge_detector update_tick(#RISE(0), #FALL(1), .clk(clk), .in(game_clock[0])); 
+  
+  always {
+    timer_done = timer == 0; // Check if time is up
+    in_gameplay = gamestates.q == gamestates.GAMEPLAY || gamestates.q == gamestates.GAMEOVER;  
+    game_tick = 0; // unless we're in gameplay, game_tick never rises
+
+    case (gamestates.q) { // start_game
+    // Wait for input loop
+      gamestates.START:
+        fsm_state = 2b00;
+        reset_delay_counter.d = 2b0;
+        // Display Starting screen
+        // Difficulty selector button
+        if ((io_button_values[2] == 1) && (io_button_values[3] ==1)) { // Chosen Player 1's blue colour, more difficult
+          difficulty.d = 0; //Chosen fast clock
+          fsm_state = 2b01;
+          gamestates.d = gamestates.GAMEPLAY;  
+        }
+        if ((io_button_values[8] == 1) && (io_button_values[9]==1)){ // Chosen Player 2's red colour, easier
+          difficulty.d = 1;  //Chosen slow clock
+          fsm_state = 2b01;
+          gamestates.d = gamestates.GAMEPLAY;  
+        }
+              
+      gamestates.GAMEPLAY:
+        fsm_state = 2b01;
+
+        game_tick = difficulty.q ? game_clock[1] : game_clock[0];
+
+        // Transition to GAMEOVER if CPU signals game over, or time is up
+        if ((end_game) || (timer == 0)){ 
+          fsm_state = 2b10;
+          gamestates.d = gamestates.GAMEOVER;
+        }
+
+      gamestates.GAMEOVER:
+        fsm_state = 2b10;
+
+        // Transition to START when either pair of fire buttons are pressed
+        if (  (io_button_values[0] && io_button_values[1]) 
+            ||(io_button_values[6] && io_button_values[7]) ) {
+          gamestates.d = gamestates.DELAY;  
+        }
+
+      // Wait a few ticks before starting game again
+      gamestates.DELAY:
+        fsm_state = 2b10;
+        if(reset_delay_counter.q < 2d3){
+          reset_delay_counter.d = update_tick.out ? reset_delay_counter.q +1 : reset_delay_counter.q;
+        }
+        else{
+          gamestates.d = gamestates.START;
+        }
+
+      default:
+        gamestates.d = gamestates.START;
+        difficulty.d = 1b0;
+        fsm_state = 2b00;
+  
+    }
+  }
+}

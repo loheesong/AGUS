@@ -1,0 +1,2 @@
+cd "D:/Documents/Term 6/Computation Structure/1D/1d-project-20/cores"
+create_project managed_ip_project "D:/Documents/Term 6/Computation Structure/1D/1d-project-20/cores/managed_ip_project" -part xc7a35tftg256-1 -ip

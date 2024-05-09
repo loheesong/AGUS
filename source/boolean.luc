@@ -1,0 +1,21 @@
+module boolean #(
+  SIZE = 16 : SIZE <= 32
+) (
+  input a[SIZE],
+  input b[SIZE],
+  input alufn_signal[6],
+  output c[SIZE]
+  ) {
+  
+  // create SIZE single bit 4-way muxes, with inputs
+  // fed by truth table from alufn_signal.
+  // selector will be connected to bits from a and b.
+  mux_4 mux_4_32[SIZE](.in(alufn_signal[3:0]));
+  
+  always {
+    mux_4_32.s0 = a;
+    mux_4_32.s1 = b;
+    c = mux_4_32.out;
+  }
+ }
+

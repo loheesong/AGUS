@@ -1,0 +1,64 @@
+||||| Test: p1 move left and right, R1 R3 3 LED light up 
+CMOVE(3, R1)
+ST(R1, test, R31)
+LD(R31, test, R3)
+
+ST(R31, players_pos)
+CMOVE(4, R5)
+CMOVE(7, R6)
+ST(R6, players_pos, R5) | p1 y is 7
+CMOVE(8, R5)
+CMOVE(29, R6)
+ST(R6, players_pos, R5)
+CMOVE(12, R5)
+ST(R31, players_pos, R5)
+
+| must write twice 
+ST(R31, players_pos_rw)
+CMOVE(4, R5)
+CMOVE(7, R6)
+ST(R6, players_pos_rw, R5) | p1 y is 7
+CMOVE(8, R5)
+CMOVE(29, R6)
+ST(R6, players_pos_rw, R5)
+CMOVE(12, R5)
+ST(R31, players_pos_rw, R5)
+
+main:
+CMOVE(4, R5)
+LD(R5, players_pos_rw, R7) | R7 p1 y 
+
+| get input 
+LD(inputs, R8) | p1 left input 
+LD(R5, inputs, R9) | p1 right input 
+
+BT(R8, start_if_1) | left pressed 
+BR(end_if_1)
+start_if_1: | if p1 presses left 
+    SUBC(R7, 1, R7)
+end_if_1:
+
+BT(R9, start_if_2) | right pressed 
+BR(end_if_2)
+start_if_2: |if p1 press right 
+    ADDC(R7, 1, R7)
+end_if_2:
+
+ST(R7, players_pos, R5) | store player LED 
+ST(R7, players_pos_rw, R5) | store player 
+
+next:
+
+wait_for_frame_low:
+ANDC(R26, 0x1, R0)
+BT(R0, wait_for_frame_low)
+
+wait_for_frame_high:
+ANDC(R26, 0x1, R0)
+BF(R0, wait_for_frame_high)
+
+BR(main)
+
+| current behaviour: 
+    | left button moves it right 
+    | right button dont work 

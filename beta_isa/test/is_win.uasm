@@ -1,0 +1,266 @@
+.include beta.uasm
+
+|||Initialise ammo lives
+ADDC(R31, 3, R1)
+ADDC(R31, 2, R2)
+ADDC(R31, 2, R3)
+ADDC(R31, 2, R4)
+
+|||Calling the function
+BEQ(R31, fn_is_win, LP)
+DEALLOCATE(1)
+HALT()
+
+||Is Win function
+fn_is_win:
+    PUSH(LP)	
+	PUSH(BP)	
+	MOVE(SP,BP)	
+	| PUSH all used registers
+	PUSH(R17)
+	PUSH(R18)
+	PUSH(R19)
+	PUSH(R20)
+	PUSH(R5)
+	PUSH(R6)
+	PUSH(R7)
+	PUSH(R8)
+	PUSH(R9)
+	PUSH(R10)
+	PUSH(R11)
+	PUSH(R12)
+    PUSH(R13)
+    PUSH(R14)
+    PUSH(R15)
+    PUSH(R16)
+
+    
+    ADDC(R31, 0, R18) | R18 contains i
+    ADDC(R31, 6, R19) | R19 contains 6
+
+    fn_is_win_check_while: 
+        LD(R31, MAX_AMMO, R17) | R17 contains MAX_AMMO
+        CMPLT(R18, R19, R0) | check if i < 6
+        BEQ(R0, fn_is_win_finish_loop, R31)
+        MULC(R18, 3, R20) | R20 contains Ball
+        CMPLTC(R20, 9, R9) | R9 contains ball < 9
+        ADDC(R20, 1, R5) | R5 contains Ball + 1
+        ADDC(R20, 2, R6) | R5 contains Ball + 2
+        MULC(R20, 4, R20) | R20 is address of Ball
+        MULC(R5, 4, R5) | R5 is address of Ball + 1
+        MULC(R6, 4, R6) | R6 is address of Ball + 2
+
+        LD(R20, balls_info, R7) | R7 contains ball_x
+        LD(R5, balls_info, R8) | R8 contains ball_y
+
+        
+        XORC(R9, 1, R9) | R9 contains ball >= 9 aka player
+
+        MULC(R9, 2, R10) | R10 contains 2*player
+        ADDC(R31, 2, R11) | R11 contains 2
+        SUB(R11, R10, R10) | R10 contains other_player
+        MULC(R10, 2, R16) | R16 contains ammo_lives_other_i
+        ADDC(R10, 1, R11) | R11 contains other_player + 1
+        MULC(R10, 4, R10) | R10 contains the address of other_player
+        MULC(R11, 4, R11) | R11 contains the address of other_player + 1
+
+        LD(R10, players_pos, R10) | R10 contains other_playerx
+        LD(R11, players_pos, R11) | R11 contains other_playery
+
+        MULC(R9, 2, R12) | R12 contains ammo_lives_i
+
+        CMPEQ(R7, R10, R0) | Check ball_x == other_player
+        BEQ(R0, finish_if, R31) | First "if"
+
+        CMPLT(R8, R11, R13) | R13 contains ball_y < other_playery
+
+        LD(R31, PLAYER_LENGTH, R14) | R14 contains PLAYER_LENGTH
+        ADD(R11, R14, R14) | R14 contains other_playery + PLAYER_LENGTH
+        SUBC(R14, 1, R14) | R14 contains other_playery + PLAYER_LENGTH - 1
+        CMPLE(R8, R14, R14) | R14 contains ball_y <= other_playery + PLAYER_LENGTH - 1
+        XORC(R14, 1, R14) | R14 contains ball_y > other_playery + PLAYER_LENGTH - 1
+        OR(R13, R14, R13) | R13 contains the condition for 2nd if
+
+        BEQ(R13, fn_is_win_finish_2nd_if, R31) | Skip to finish_1st_if if the condition is not met
+
+        BEQ(R9, fn_is_win_p2_loses_life, R31) | p2 loses life if player == 0
+        SUBC(R2, 1, R2) | p1 lost 1 life
+        BEQ(R31, fn_is_win_finish_2nd_if, R31)
+
+        fn_is_win_p2_loses_life:
+            SUBC(R4, 1, R4) | p2 lost 1 life
+
+        fn_is_win_finish_2nd_if:
+        ADDC(R31, 32, R0) | R0 contains 32
+        ST(R0, balls_info, R20) | ballinfo x updated 
+        ST(R0, balls_info, R5) | ballinfo y updated 
+        ST(R0, balls_info, R6) | ballinfo c updated 
+
+        BEQ(R9, fn_is_win_p1ammo, R31) | if player == 0 then p1 regen ball
+        ADD(R31, R3, R15) | R15 is ammo of p1
+        BEQ(R31, fn_is_win_after_ammo, R31)
+
+        fn_is_win_p1ammo:
+            ADD(R31, R1, R15) | R15 is ammo of p2
+
+        fn_is_win_after_ammo:
+            SUBC(R17, 1, R17) | R17 contains MAX_AMMO - 1
+            CMPLE(R15, R17, R0) | Check ammo <= MAX_AMMO - 1
+            BEQ(R0, finish_if, R31) | Skip to end of if 
+            
+            BEQ(R9, p1_regen, R31) | p1_regen if player == 0
+            ADDC(R3, 1, R3) |p2 regen
+            BEQ(R31, finish_if, R31)
+
+            p1_regen:
+                ADDC(R1, 1, R1) |p2 regen
+
+        finish_if:
+            ADDC(R18, 1, R18) | i ++
+            BEQ(R31, fn_is_win_check_while, R31) |looping
+
+    fn_is_win_finish_loop:
+        CMPEQC(R2, 0, R7) | contains ammo_lives_counter[1] == 0
+        CMPEQC(R4, 0, R8) | contains ammo_lives_counter[3] == 0
+        OR(R7, R8, R7) 
+        ST(R7, ISWIN, R31) | Store the bool
+
+        POP(R16)
+        POP(R15)
+        POP(R14)
+        POP(R13)
+        POP(R12)
+        POP(R11)
+        POP(R10)
+        POP(R9)
+        POP(R8)
+        POP(R7)
+        POP(R6)
+        POP(R5)
+        POP(R20)
+        POP(R19)
+        POP(R18)
+        POP(R17)
+        MOVE(BP,SP)
+        POP(BP)
+        POP(LP)
+        RTN()
+
+
+balls_info: | 18 elements
+|||Left Player
+    LONG(32)
+    LONG(32)
+    LONG(32) 
+    LONG(32)
+    LONG(32)   
+    LONG(32)
+    LONG(32)
+    LONG(32) 
+    LONG(32)
+|||Right Plater
+    LONG(0) 
+    LONG(5) 
+    LONG(2) 
+    LONG(32) 
+    LONG(32) 
+    LONG(32) 
+    LONG(32) 
+    LONG(32) 
+    LONG(32)
+
+players_pos: | 4 elements
+|||Left Player
+    LONG(0)
+    LONG(6)
+|||Right Player
+    LONG(29)
+    LONG(0)
+
+HEIGHT:
+    LONG(15)
+WIDTH:
+    LONG(30)
+PLAYER_LENGTH:
+    LONG(5)
+MAX_AMMO:
+    LONG(3)
+ISWIN:
+    LONG(0)
+
+|||Test case 1: P1 fails to defend
+| Initial values:
+    |players_pos: 0 6 29 0
+    |balls_info: ball4: 0 5 2
+    |R1-R4: 3 2 2 2
+| Expected values:
+    |players_pos: 0 6 29 0
+    |balls_info: all 32
+    |R1-R4: 3 1 3 2
+    |ISWIN: 0
+
+|||Test case 2: P2 fails to defend
+| Initial values:
+    |players_pos: 0 6 29 0
+    |balls_info: ball1: 29 6 2
+    |R1-R4: 2 1 3 3
+| Expected values:
+    |players_pos: 0 6 29 0
+    |balls_info: all 32
+    |R1-R4: 3 1 3 2
+    |ISWIN: 0
+
+|||Test case 3: P1 successfully defends
+| Initial values:
+    |players_pos: 0 3 29 3
+    |balls_info: b5: 0 5 2
+    |R1-R4: 3 2 2 2
+| Expected values:
+    |players_pos: 0 3 29 3
+    |balls_info: all 32
+    |R1-R4: 3 2 3 2
+    |ISWIN: 0
+
+|||Test case 4: P2 successfully defends
+| Initial values:
+    |players_pos: 0 3 29 1
+    |balls_info: b2 29 4 2
+    |R1-R4: 2 1 3 2
+| Expected values:
+    |players_pos: 0 3 29 1
+    |balls_info: all 32
+    |R1-R4: 3 1 3 2
+    |ISWIN: 0
+
+|||Test case 5: Both fail to defend and 2 random balls, p3 and p6 hit
+| Initial values:
+    |players_pos: 0 6 29 3
+    |balls_info: b1: 2 1 2, b3: 29 2 2, b4: 15, 7, 2, b6: 0 12 2
+    |R1-R4: 1 2 1 2
+| Expected values:
+    |players_pos: 0 6 29 3
+    |balls_info: b1: 2 1 2, b4: 15, 7, 2
+    |R1-R4: 2 1 2 1
+    |ISWIN: 0
+
+|||Test case 6: 
+| Initial values: P1 wins, b3 hits
+    |players_pos: 0 6 29 3
+    |balls_info: b1: 2 1 2, b3: 29 2 2, b4: 15, 7, 2
+    |R1-R4: 1 2 2 1
+| Expected values:
+    |players_pos: 0 6 29 3
+    |balls_info: b1: 2 1 2, b4: 15, 7, 2
+    |R1-R4: 2 2 2 0
+    |ISWIN: 1
+
+|||Test case 7: P2 wins, p3 and p4 hit
+| Initial values:
+    |players_pos: 0 6 29 3
+    |balls_info: b1: 2 1 2, b3: 29 2 2, b4: 0, 2, 2
+    |R1-R4: 1 1 2 2
+| Expected values:
+    |players_pos: 0 6 29 3
+    |balls_info: b1: 2 1 2
+    |R1-R4: 2 0 3 1
+    |ISWIN: 1

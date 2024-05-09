@@ -1,0 +1,86 @@
+module regfile_unit (
+    input clk,  // clock
+    input rst,  // reset
+    input ra[5],
+    input rb[5], 
+    input rc[5],
+    input wasel,
+    input ra2sel,
+    input werf,
+    input wdsel_out[32],
+    input slowclk,
+    output z,
+    output reg_data_1[32],
+    output reg_data_2[32],
+    output mwd[32],
+    
+    output p1_hp[2],
+    output p1_ammo[2],
+    output p2_hp[2],
+    output p2_ammo[2],
+    input r26[32]
+  ) {
+  
+  regfile_memory regfile(.clk(clk), .rst(rst));
+  sig ra2sel_out[5];
+  sig wasel_out[5];
+  
+  always {
+  
+    // initial setups to silence output compilation errors
+    ra2sel_out = 0;
+    wasel_out = 0;
+    z = 0;
+    mwd = 0;
+
+    //*****REGFILE*******//
+    // do not write anything to the regfile unless PC advances 
+    regfile.write_enable = 0;
+    if (slowclk) {
+      regfile.write_enable = werf;
+    }
+    
+    // RA2SEL mux
+    case(ra2sel){
+      // implement the RA2SEL mux logic here
+      0: ra2sel_out = rb;
+      1: ra2sel_out = rc; 
+      default: 
+        ra2sel_out = rb; // default case to silence warnings 
+    }
+
+    // WASEL mux 
+    case(wasel){
+      // implement the WASEL mux logic here
+      0: wasel_out = rc;
+      1: wasel_out = 5b11110;
+      default:
+        wasel_out = rc; // default case to silence warnings 
+    }
+
+    // connections to regfile memory
+    regfile.read_address_2 = ra2sel_out;
+    regfile.read_address_1 = ra;
+    regfile.write_address = wasel_out;
+    regfile.write_data = wdsel_out;
+
+    // compute z 
+    z = |regfile.reg_data_1 ? 0 : 1;
+
+    // output connections
+    reg_data_1 = regfile.reg_data_1; 
+    reg_data_2 = regfile.reg_data_2;
+    
+    // connect output of RD2 port of regfile_memory as mwd
+    mwd = regfile.reg_data_2;
+    
+    // Side-channel outputs
+    p1_hp = regfile.p1_hp;
+    p1_ammo = regfile.p1_ammo;
+    p2_hp = regfile.p2_hp;
+    p2_ammo = regfile.p2_ammo;
+
+    // Side-channel inputs
+    regfile.r26 = r26;
+  }
+}

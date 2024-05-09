@@ -1,0 +1,49 @@
+||||| Test: p1 and p2 move from 0 to 10 then loop back 
+
+main:
+| left right aim fire left right aim fire 
+| players_pos = x y x y 
+CMOVE(1, R5)
+MULC(R5, 4, R5)
+LD(R5, players_pos_rw, R6) | R6 is p1 y
+CMOVE(3, R5)
+MULC(R5, 4, R5)
+LD(R5, players_pos_rw, R7) | R7 is p2 y 
+
+CMPLTC(R6, 10, R5)
+BF(R5, else_1)
+| if p1 y < 10:
+    | move down 
+    ADDC(R6, 1, R6)
+    BR(end_if_1)
+else_1:
+    CMOVE(0, R6)
+end_if_1:
+CMOVE(1, R5)
+MULC(R5, 4, R5)
+ST(R6, players_pos, R5)
+ST(R6, players_pos_rw, R5)
+
+CMPLTC(R7, 10, R5)
+BF(R5, else_2)
+| if p2 y < 10:
+    | move down 
+    ADDC(R7, 1, R7)
+    BR(end_if_2)
+else_2:
+    CMOVE(0, R7)
+end_if_2:
+CMOVE(3, R5)
+MULC(R5, 4, R5)
+ST(R7, players_pos, R5)
+ST(R7, players_pos_rw, R5)
+
+wait_for_frame_low:
+ANDC(R26, 0x1, R0)
+BT(R0, wait_for_frame_low)
+
+wait_for_frame_high:
+ANDC(R26, 0x1, R0)
+BF(R0, wait_for_frame_high)
+
+BR(main)

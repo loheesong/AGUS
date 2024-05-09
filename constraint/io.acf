@@ -1,0 +1,101 @@
+//Player 1 buttons
+pin input_fpga[0][0] B20 pulldown; //right
+pin input_fpga[0][1] B14 pulldown; //left
+pin input_fpga[0][2] B11 pulldown; //arm
+pin input_fpga[0][3] B8 pulldown; //fire
+pin input_fpga[0][4] B5 pulldown; //aim_left
+pin input_fpga[0][5] B39 pulldown; //aim_right
+
+//Player 2 buttons
+pin input_fpga[1][0] C46 pulldown; //right
+pin input_fpga[1][1] C40 pulldown; //left
+pin input_fpga[1][2] A8 pulldown; //arm
+pin input_fpga[1][3] A5 pulldown; //fire
+pin input_fpga[1][4] C15 pulldown; //aim_left
+pin input_fpga[1][5] C18 pulldown; //aim_right
+
+
+
+pin seven_seg_sig[0][0] B36;
+pin seven_seg_sig[0][1] B37;
+pin seven_seg_sig[0][2] B33;
+pin seven_seg_sig[0][3] B34;
+pin seven_seg_sig[0][4] B30;
+pin seven_seg_sig[0][5] B31;
+pin seven_seg_sig[0][6] B27;
+
+pin seven_seg_sig[1][0] C34;
+pin seven_seg_sig[1][1] C37;
+pin seven_seg_sig[1][2] C36;
+pin seven_seg_sig[1][3] C14;
+pin seven_seg_sig[1][4] C39;
+pin seven_seg_sig[1][5] C11;
+pin seven_seg_sig[1][6] C12;
+
+//Player 1 HP
+pin status_led[0] C5;
+pin status_led[1] C3;
+pin status_led[2] C2;
+
+//Player 1 Ammo
+pin status_led[3] C9;
+pin status_led[4] C8;
+pin status_led[5] C6;
+
+//Player 2 HP
+pin status_led[6] A45;
+pin status_led[7] A43;
+pin status_led[8] A42;
+
+//Player 2 Ammo
+pin status_led[9]  A49;
+pin status_led[10] A48;
+pin status_led[11] A46;
+
+//WS2812
+pin ws2812 B24;
+
+//RIGHT-MOST LEDS show random data
+
+//io_led[0:1] is shifted to the left
+pin io_led[0][0] B9;
+pin io_led[0][1] B12; //discarded
+pin io_led[0][2] B6;
+pin io_led[0][3] B15;  //discarded
+pin io_led[0][4] B3;
+pin io_led[0][5] B2;
+pin io_led[0][6] A24;
+pin io_led[0][7] A23;
+pin io_led[1][0] A21;
+pin io_led[1][1] A20;
+pin io_led[1][2] A18;
+pin io_led[1][3] A17;
+pin io_led[1][4] A15;
+pin io_led[1][5] A14;
+pin io_led[1][6] A12;
+pin io_led[1][7] A11;
+
+//RIGHT-MOST DIPS SHOULD BE SET TO 0
+
+//io_dip[0:1] is shifted to the left
+pin io_dip[0][0] B42 pulldown;
+pin io_dip[0][1] B43 pulldown;
+pin io_dip[0][2] B45 pulldown;
+pin io_dip[0][3] B46 pulldown;
+pin io_dip[0][4] B48 pulldown;
+pin io_dip[0][5] B49 pulldown;
+pin io_dip[0][6] A27 pulldown;
+pin io_dip[0][7] A28 pulldown;
+
+pin io_dip[1][0] A30 pulldown;
+pin io_dip[1][1] A31 pulldown;
+pin io_dip[1][2] A33 pulldown;
+pin io_dip[1][3] A34 pulldown;
+pin io_dip[1][4] A36 pulldown;
+pin io_dip[1][5] A37 pulldown;
+pin io_dip[1][6] A39 pulldown;
+pin io_dip[1][7] A40 pulldown;
+
+pin io_button B28 pulldown;
+
+

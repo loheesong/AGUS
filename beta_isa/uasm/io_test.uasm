@@ -1,0 +1,36 @@
+CMOVE(0, R5)
+CMOVE(2, R2)
+CMOVE(1, R4)
+
+CMOVE(4, R6)
+
+main:
+CMOVE(3, R1)
+ST(R1, test, R31)
+LD(R31, test, R3)
+
+bounds_check:
+CMPLTC(R5, 30, R0)
+BT(R0, bounds_end)
+
+bounds_body:
+CMOVE(0, R5)
+
+bounds_end:
+ADDC(R5, 1, R5)
+
+ST(R5, balls_info, R31)
+ST(R1, balls_info, R6)
+
+next:
+
+wait_for_frame_low:
+ANDC(R26, 0x1, R0)
+BT(R0, wait_for_frame_low)
+
+wait_for_frame_high:
+ANDC(R26, 0x1, R0)
+BF(R0, wait_for_frame_high)
+
+
+BR(main)

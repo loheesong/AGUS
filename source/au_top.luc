@@ -1,0 +1,168 @@
+module au_top (
+    input clk,              // 100MHz clock
+    input rst_n,            // reset button (active low)
+    output led [8],         // 8 user controllable LEDs
+    input usb_rx,           // USB->Serial input
+    output usb_tx,          // USB->Serial output
+    input input_fpga[2][6], // Player input buttons 
+    output seven_seg_sig[2][7], // 7 seg display
+    output status_led[12], // Ammo / lives of P1,P2
+    output ws2812, 
+    output io_led [2][8],   // LEDs on IO Shield Alternate LEDs
+    input io_button,    // 5 buttons on IO Shield
+    input io_dip [2][8]     // DIP switches on IO Shield
+) {
+  
+  // helper signals
+  sig rst;                  // reset signal
+
+  // motherboard
+  motherboard motherboard(.clk(clk), .rst(rst));
+  
+  dff fsm_state[2](.clk(clk), .rst(rst));
+  
+  // OTHERS (for debug)
+  reset_conditioner reset_cond(.clk(clk));
+  
+  debug_module debugger(.clk(clk),
+  .rst(rst),
+  .motherboard_debug(motherboard.debug),
+  .motherboard_id(motherboard.id),
+  .motherboard_ia(motherboard.ia),
+  .motherboard_ma(motherboard.ma),
+  .motherboard_mwd(motherboard.mwd),
+  .motherboard_mrd(motherboard.mrd),
+  .motherboard_input_buffer(32b0),
+  .motherboard_output_buffer(32b0),
+  .io_button(io_button),    // 5 buttons on IO Shield
+  .io_dip(io_dip)    // DIP switches on IO Shield
+  );
+  
+  //ws2812b variables
+  const COLUMN_DIMENSION = 30; // how many "columns"? 
+  const ROW_DIMENSION = 15; // how many "rows"?
+  const PIXEL_COUNT = COLUMN_DIMENSION *  ROW_DIMENSION;
+  const ENCODING_AMOUNT = 8; // how many different encodings are used?
+  led_mod led_module(#PIXEL_COUNT(PIXEL_COUNT), #ENCODING_AMOUNT(ENCODING_AMOUNT), .clk(clk),.rst_n(rst_n));
+  led_decoder led_dec(#COLUMN_DIMENSION(COLUMN_DIMENSION), #ROW_DIMENSION(ROW_DIMENSION), #ENCODING_AMOUNT(ENCODING_AMOUNT), .clk(clk), .rst(rst));
+  
+  counter frame_ctr(#SIZE(30), .clk(clk), .rst(rst)); //Approx 24 frames per second - 100MHz/(2*2^21)
+  sig frameclock;
+  
+  //Input/Output Modules
+  button_module button_manager(
+    #BUTTON_NUM(12),
+    .clk(clk),
+    .button_inputs(c{input_fpga[1],input_fpga[0]}),
+    .rst(rst)
+  );
+  status_led status_manager;
+  seven_seg seg[2];
+  
+  edge_detector frame_update(.clk(clk),.in(frameclock),#FALL(1),#RISE(0));
+  timer game_timer(.clk(clk),.rst(rst));
+  
+  //fsm module
+  game_fsm fsm_module(.clk(clk),.io_button_values(button_manager.io_button_values),.rst(rst));
+  dff last_time[2][4](.clk(clk),.rst(rst));
+
+  // Video loader
+  video_loader video_loader(.clk(clk), .rst(rst));
+  
+  //temporary signals  
+  dff change_diff(.clk(clk),.rst(rst));
+  edge_detector irq(.clk(clk),.in(button_manager.io_button_values[2]),#FALL(1),#RISE(0));
+  
+  always {
+    reset_cond.in = ~rst_n;   // input raw inverted reset signal
+    rst = reset_cond.out;     // conditioned reset
+    usb_tx = usb_rx;          // loop serial port
+
+    // clocks
+    motherboard.slowclk = frame_ctr.value[4];
+    frameclock = frame_ctr.value[20]; // Run frames ~2-4x faster than game
+    fsm_module.game_clock = frame_ctr.value[22:21];
+    button_manager.game_clock = fsm_module.game_tick;
+    video_loader.game_clock = fsm_module.game_tick;
+
+    fsm_state.d = fsm_module.fsm_state;
+    
+    //debugger
+    io_led = debugger.io_led; 
+    led = debugger.led;
+    
+    
+    //Actual Outputs
+    status_led = status_manager.led_pins;
+    seven_seg_sig = c{seg.segs};
+    
+    //ws2812b connections
+    ws2812 = led_module.ws2812;
+    led_module.update = frame_update.out;
+    led_module.color_data = led_dec.color_data;
+
+    
+    //hard-wired registers 
+    
+    //R1 contains p1 ammo p1_stats[1] = packaged_data_out[3:2]
+    //R2 contains p1 life p1_stats[0] = packaged_data_out[1:0]
+    status_manager.p1_stats = {
+        motherboard.p1_ammo,
+        motherboard.p1_hp
+    };
+    
+    //R3 contains p2 ammo p2_stats[1] = packaged_data_out[7:6]
+    //R4 contains p2 life p2_stats[0] = packaged_data_out[5:4]
+    status_manager.p2_stats = {
+        motherboard.p2_ammo,
+        motherboard.p2_hp
+    };    
+
+    // Button inputs
+    motherboard.buttons_packed = button_manager.packaged_output_values;
+
+    // Game over states
+    fsm_module.end_game = motherboard.p1_hp == 0 || motherboard.p2_hp == 0;
+    // fsm_module.end_game = 0;
+    led_dec.player_1_won = motherboard.p2_hp == 0;
+    led_dec.player_2_won = motherboard.p1_hp == 0;
+   
+    video_loader.video_data = motherboard.video_data_out;
+    motherboard.video_raddr = video_loader.video_raddr;
+    //{p1_b1_x,p1_b2_y,p1_b2_x,p1_b2_y,p1_b3_x,p1_b3_y,p2_b1_x,p2_b2_y,p2_b2_x,p2_b2_y,p2_b3_x,p2_b3_y,player_1,player_2} 6 bits each
+    led_dec.player1 = video_loader.player1;
+    led_dec.player2 = video_loader.player2;
+    led_dec.p1_b1_x = video_loader.p1_b1_x;
+    led_dec.p1_b2_x = video_loader.p1_b2_x;
+    led_dec.p1_b3_x = video_loader.p1_b3_x;
+    led_dec.p2_b1_x = video_loader.p2_b1_x;
+    led_dec.p2_b2_x = video_loader.p2_b2_x;
+    led_dec.p2_b3_x = video_loader.p2_b3_x;
+    led_dec.p1_b1_y = video_loader.p1_b1_y;
+    led_dec.p1_b2_y = video_loader.p1_b2_y;
+    led_dec.p1_b3_y = video_loader.p1_b3_y;
+    led_dec.p2_b1_y = video_loader.p2_b1_y;
+    led_dec.p2_b2_y = video_loader.p2_b2_y;
+    led_dec.p2_b3_y = video_loader.p2_b3_y;
+    led_module.clear = 0;
+    led_dec.fsm_state = fsm_state.q;
+    led_dec.blink = frame_ctr.value[26];
+    
+    if(fsm_module.fsm_state[0]){
+      last_time.d = c{{game_timer.time_left_tens},{game_timer.time_left_ones}};
+    }
+    //timer display
+    seg.char = |fsm_state.q ? last_time.q : 2x{{4b0}};
+    fsm_module.timer = last_time.q[1]*10+last_time.q[0];
+    game_timer.restart = fsm_state.q==0;
+
+    motherboard.timer_done = fsm_module.timer_done;
+    motherboard.in_gameplay = fsm_module.in_gameplay;
+    motherboard.game_tick = fsm_module.game_tick;
+    
+    //debug values
+    change_diff.d = irq.out ? ~change_diff.q : change_diff.q;
+    led_dec.debug = 0;
+    led_dec.debug_package = 0;
+  }
+}

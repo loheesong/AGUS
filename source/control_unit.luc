@@ -1,0 +1,145 @@
+module control_unit (
+    input clk,
+    input irq, 
+    input z,
+    input rst,    
+    input opcode[6],
+    input slowclk,
+    input ia31,
+    output pcsel[3], 
+    output wasel,
+    output asel,
+    output ra2sel,
+    output bsel,
+    output alufn[6],
+    output wdsel[2], 
+    output werf,
+    output wr
+  ) {
+  
+  const CU_ROM = { 
+    b01110000000000010, // 0x3F  
+    b00000011000110110, // 0x3E  SRAC
+    b00000011000010110, // 0x3D  SHRC
+    b00000011000000110, // 0x3C  SHLC
+    b01110000000000010, // 0x3B  
+    b00000010101100110, // 0x3A  XORC
+    b00000010111100110, // 0x39  ORC 
+    b00000010110000110, // 0x38  ANDC
+    b01110000000000010, // 0x37  
+    b00000011101110110, // 0x36  CMPLEC
+    b00000011101010110, // 0x35  CMPLTC
+    b00000011100110110, // 0x34  CMPEQC
+    b01110000000000010, // 0x33  DIVC
+    b00000010000100110, // 0x32  MULC
+    b00000010000010110, // 0x31  SUBC
+    b00000010000000110, // 0x30  ADDC  
+    b01110000000000010, // 0x2F  
+    b00000001000110110, // 0x2E  SRA
+    b00000001000010110, // 0x2D  SHR 
+    b00000001000000110, // 0x2C  SHL
+    b01110000000000010, // 0x2B  
+    b00000000101100110, // 0x2A  XOR
+    b00000000111100110, // 0x29  OR
+    b00000000110000110, // 0x28  AND 
+    b01110000000000010, // 0x27   
+    b00000001101110110, // 0x26  CMPLE
+    b00000001101010110, // 0x25  CMPLT
+    b00000001100110110, // 0x24  CMPEQ
+    b01110000000000010, // 0x23  DIV 
+    b00000000000100110, // 0x22  MUL
+    b00000000000010110, // 0x21  SUBC
+    b00000000000000110, // 0x20  ADD
+    b00001000110101010, // 0x1F  LDR
+    b00001000110100010, // 0x1E  BNE
+    b00001000110100010, // 0x1D  BEQ
+    b01110000000000010, // 0x1C  
+    b01001000110100010, // 0x1B  JMP
+    b01110000000000010, // 0x1A  
+    b00000110000000001, // 0x19  ST
+    b00000010000001010, // 0x18  LD
+    b01110000000000010, // 0x17  
+    b01110000000000010, // 0x16  
+    b01110000000000010, // 0x15  
+    b01110000000000010, // 0x14  
+    b01110000000000010, // 0x13  
+    b01110000000000010, // 0x12  
+    b01110000000000010, // 0x11  
+    b01110000000000010, // 0x10  
+    b01110000000000010, // 0x0F   
+    b01110000000000010, // 0x0E   
+    b01110000000000010, // 0x0D   
+    b01110000000000010, // 0x0C   
+    b01110000000000010, // 0x0B   
+    b01110000000000010, // 0x0A   
+    b01110000000000010, // 0x09   
+    b01110000000000010, // 0x08   
+    b01110000000000010, // 0x07   
+    b01110000000000010, // 0x06   
+    b01110000000000010, // 0x05   
+    b01110000000000010, // 0x04   
+    b01110000000000010, // 0x03   
+    b01110000000000010, // 0x02   
+    b01110000000000010, // 0x01   
+    b01110000000000010  // 0x00
+  };
+    
+  dff irq_sampler(#INIT(0), .clk(clk));
+
+  always {
+  
+    // sample interrupt at the beginning of each cycle
+    if (~irq_sampler.q){
+      // sample only when interrupt bit is 0 (clear) 
+      irq_sampler.d = irq;
+    }
+  
+    // control signal basic output connections
+    pcsel = CU_ROM[opcode][16:14]; 
+    wasel = CU_ROM[opcode][13]; 
+    asel = CU_ROM[opcode][12]; 
+    ra2sel = CU_ROM[opcode][11]; 
+    bsel = CU_ROM[opcode][10]; 
+    alufn = CU_ROM[opcode][9:4]; 
+    wdsel = CU_ROM[opcode][3:2];  
+    werf= CU_ROM[opcode][1];
+    wr = CU_ROM[opcode][0]; 
+    
+    // Task 10
+    // PCSEL for BNE/BEQ
+    // Check of OPCODE == BEQ, and branch (PCSEL: 001) if z == 1
+    if(opcode == 6b011101){
+      pcsel[2:1] = 0;
+      pcsel[0] = z;
+    }
+    // Check of OPCODE == BNE, and branch (PCSEL: 001) if z != 1
+    if(opcode == 6b011110){
+      pcsel[2:1] = 0;
+      pcsel[0] = ~z;
+    }
+
+    // Task 11
+    // IRQ handling
+    // IRQ can happen only in user mode (ia31 is 0)
+    // If IRQ happens during kernel mode, it will not be serviced until we return to user mode
+
+    if (irq_sampler.q & slowclk & ~ia31){
+      
+      // set all appropriate control signals
+      pcsel = 3b100;
+      wasel = 1b1;
+      werf = 1b1;
+      wdsel = 2b00;
+      wr = 1b0;      
+      // don't forget to clear the content of irq_sampler dff
+      irq_sampler.d = 0;
+    }
+    
+    
+    // force wr = 0 when reset == 1 
+    if (rst){
+      wr = 0;
+    }
+
+  }
+}

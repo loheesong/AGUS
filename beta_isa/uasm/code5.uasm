@@ -1,0 +1,502 @@
+|| Initialize constants
+CMOVE(15, R6)
+ST(R6, HEIGHT, R31)
+CMOVE(30, R6)
+ST(R6, WIDTH, R31)
+CMOVE(5, R6)
+ST(R6, PLAYER_LENGTH, R31)
+CMOVE(3, R6)
+ST(R6, MAX_AMMO, R31)
+CMOVE(0, R6)
+ST(R6, ISWIN, R31)
+
+ALLOCATE(26)
+
+
+wait_for_game_start:
+|| Initialize ammo
+CMOVE(3, R1)
+CMOVE(0, R2)
+CMOVE(3, R3)
+CMOVE(0, R4)
+ANDC(R26, 0x4, R0)
+BF(R0, wait_for_game_start)
+
+
+|| Initialize ball positions
+|| a value of 32 in all fields is used to park balls
+CMOVE(32, R6) | x = 32
+CMOVE(0, R5)
+
+|| Initialize player positions
+
+CMOVE(0, R5)
+CMOVE(0, R6)
+ST(R6, players_pos_rw, R5)
+ST(R6, players_pos, R5)
+
+CMOVE(4, R5)
+CMOVE(5, R6)
+ST(R6, players_pos_rw, R5)
+ST(R6, players_pos, R5)
+
+CMOVE(8, R5)
+CMOVE(30, R6) | Player 2 X position should be 30
+ST(R6, players_pos_rw, R5)
+ST(R6, players_pos, R5)
+
+CMOVE(12, R5)
+CMOVE(5, R6)
+ST(R6, players_pos_rw, R5)
+ST(R6, players_pos, R5)
+
+|| Initialize ball positions
+
+CMOVE(0x00, R5)
+CMOVE(29, R6) | x = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x04, R5)
+CMOVE(7, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x08, R5)
+CMOVE(2, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+||||| Test: p1 ball1 bounce against top border 
+CMOVE(0xC, R5)
+CMOVE(28, R6) | x = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x10, R5)
+CMOVE(7, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x14, R5)
+CMOVE(2, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+||||| Test: p1 ball2 bounce against top border 
+CMOVE(0x18, R5)
+CMOVE(27, R6) | x = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x1C, R5)
+CMOVE(7, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x20, R5)
+CMOVE(2, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+||||| Test: p2 ball0 bounce against top border 
+CMOVE(0x24, R5)
+CMOVE(1, R6) | x = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x28, R5)
+CMOVE(7, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x2C, R5)
+CMOVE(2, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+||||| Test: p2 ball1 bounce against top border 
+CMOVE(0x30, R5)
+CMOVE(2, R6) | x = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x34, R5)
+CMOVE(7, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x38, R5)
+CMOVE(2, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+||||| Test: p2 ball2 bounce against top border 
+CMOVE(0x3C, R5)
+CMOVE(3, R6) | x = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x40, R5)
+CMOVE(7, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+CMOVE(0x44, R5)
+CMOVE(2, R6) | y = 2
+ST(R6, balls_info, R5)
+ST(R6, balls_info_rw, R5)
+
+
+main:
+
+|||||||||||||
+| fn_is_win
+|||||||||||||
+
+ADDC(R31, 0, R18) | R18 contains i
+
+LD(R31, MAX_AMMO, R17) | R17 contains MAX_AMMO
+
+fn_is_win_check_while: | supposed to loop 6 times 
+    CMPLTC(R18, 6, R0) | check if i < 6
+    BF(R0, fn_is_win_finish_loop)
+
+    MULC(R18, 12, R20) | R20 contains *ball_i (word)
+    ADDC(R20, 4, R5) | R5 contains Ball + 1
+    ADDC(R20, 8, R6) | R5 contains Ball + 2
+
+    LD(R20, balls_info_rw, R7) | R7 contains ball_x
+    LD(R5, balls_info_rw, R8) | R8 contains ball_y
+
+    || Check collision with other player x
+
+    | If i < 3, we're looking at a p1 ball; get p2's address
+    | Otherwise, we're looking at a p2 ball; get p1's address
+    CMPLTC(R18, 3, R9) | R9 contains (i < 3)
+    BT(R9, fn_is_win_get_player2_xy_addrs) 
+    
+    fn_is_win_get_player1_xy_addrs:
+    CMOVE(0, R10) | player1_x
+    CMOVE(4, R11) | *player1_y
+    BR(fn_is_win_load_other_player_xy)
+
+    fn_is_win_get_player2_xy_addrs:
+    CMOVE(29, R10) | player2_x
+    CMOVE(12, R11) | *player2_y
+
+    fn_is_win_load_other_player_xy:
+    LD(R11, players_pos_rw, R11) | R11 contains other_playery
+
+    CMPEQ(R7, R10, R0) | Check ball_x == other_player_x
+    BF(R0, finish_if) | If we haven't collided, break out and move on to next ball
+
+    | Rest of this block assumes we did collide with the other side
+
+
+    || BODGE: OR-together 5 y position checks with all 5 paddle positions
+    || R13 <- collided with paddle?
+
+    || Position #1
+    CMPEQ(R8, R11, R13)
+
+    || Position #2
+    ADDC(R11, 1, R11)
+    CMPEQ(R8, R11, R14)
+    ADD(R13, R14, R13)
+
+    || Position #3
+    ADDC(R11, 1, R11)
+    CMPEQ(R8, R11, R14)
+    ADD(R13, R14, R13)
+
+    || Position #4
+    ADDC(R11, 1, R11)
+    CMPEQ(R8, R11, R14)
+    ADD(R13, R14, R13)
+
+    || Position #5
+    ADDC(R11, 1, R11)
+    CMPEQ(R8, R11, R14)
+    ADD(R13, R14, R13)
+
+    BT(R13, fn_is_win_finish_2nd_if) | Skip to finish_2st_if if ball collided with paddle
+
+    | if ball *is* outside of other_player's paddle:
+        | if player == 0:
+        BEQ(R9, fn_is_win_p2_loses_life, R31) | p2 loses life if player == 0
+            SUBC(R3, 1, R3) | p1 lost 1 life
+            BR(fn_is_win_finish_2nd_if)
+        | else:
+        fn_is_win_p2_loses_life:
+            SUBC(R1, 1, R1) | p2 lost 1 life
+
+    fn_is_win_finish_2nd_if:
+
+    | Reset ball to out-of-bounds and remove from playfield
+    ADDC(R31, 32, R0) | R0 contains 32
+    ST(R0, balls_info, R20) | ballinfo x reset
+    ST(R0, balls_info, R5) | ballinfo y reset
+    ST(R0, balls_info, R6) | ballinfo c reset
+    ST(R0, balls_info_rw, R20) | ballinfo x reset
+    ST(R0, balls_info_rw, R5) | ballinfo y reset
+    ST(R0, balls_info_rw, R6) | ballinfo c reset
+
+
+    | Regenerate ammo for ball.player
+    BEQ(R9, fn_is_win_regen_p2_ammo, R31) | if player == 0 then p1 regens ammo
+    BR(fn_is_win_regen_p1_ammo)           | otherwise p2 regens ammo
+
+    fn_is_win_regen_p1_ammo:
+    | if p1's ammo < MAX_AMMO, increment by 1
+    CMPLT(R2, R17, R0)
+    BF(R0, finish_if)
+    ADDC(R2, 1, R2)
+    BR(finish_if)
+
+    fn_is_win_regen_p2_ammo:
+    | if p2's ammo < MAX_AMMO, increment by 1
+    CMPLT(R4, R17, R0)
+    BF(R0, finish_if)
+    ADDC(R4, 1, R4)
+
+    finish_if:
+        ADDC(R18, 1, R18) | i ++
+        BR(fn_is_win_check_while) |looping
+
+fn_is_win_finish_loop:
+    CMPEQC(R1, 0, R7) | contains ammo_lives_counter[1] == 0
+    CMPEQC(R3, 0, R8) | contains ammo_lives_counter[3] == 0
+    OR(R7, R8, R7) 
+    ST(R7, ISWIN, R31) | Store the bool
+
+||||||||||||||||||||
+| fn_update_ball_pos
+||||||||||||||||||||
+
+ADDC(R31, 1, R13) | R13 contains OFFSET
+ADDC(R31, 0, R14) | R14 contains i
+ADDC(R31, 6, R15) | R15 contains 6
+
+fn_update_ball_pos_check_while: 
+    CMPLT(R14, R15, R0) | check if i < 6
+    BF(R0, fn_update_ball_pos_finish_loop)
+    MULC(R14, 12, R16) | R16 contains Ball
+    ADDC(R16, 4, R5) | R5 contains Ball + 1
+    ADDC(R16, 8, R6) | R6 contains Ball + 2
+
+    LD(R16, balls_info_rw, R7) | R7 contains x
+    LD(R5, balls_info_rw, R8) | R8 contains y
+    LD(R6, balls_info_rw, R9) | R9 contains c
+
+    CMPEQC(R7, 32, R10) | R10 contains (x == 32)
+    BT(R10, fn_update_ball_pos_check_while_next)
+
+    CMPLTC(R14, 3, R11) | R11 contains !(i >= 3)
+    XORC(R11, 1, R11) | R11 contains (i >= 3)
+    MULC(R11, 2, R11) | R11 contains 2*(i >= 3)
+    SUB(R13, R11, R11) | R11 contains (OFFSET - 2*(i >= 3))
+    ADD(R7, R11, R7) | R7 contains the updated x
+
+    BEQ(R9, fn_update_ball_pos_c_zero, R31) | Branch to fn_update_ball_pos_c_zero if c is 0
+    CMPEQC(R9, 1, R0) | Check if c is 1
+    BNE(R0, fn_update_ball_pos_c_one, R31)| Branch to fn_update_ball_pos_c_one if c is 1
+    BR(fn_update_ball_pos_update_values)
+
+fn_update_ball_pos_c_zero: 
+    BNE(R8, fn_update_ball_pos_y_notzero, R31)
+    XORC(R9, 1, R9) | c is updated
+    ADD(R8, R13, R8) | y is updated with y + OFFSET
+    BEQ(R31, fn_update_ball_pos_update_values, R31)
+
+fn_update_ball_pos_y_notzero: 
+    SUB(R8, R13, R8) | y is updated with y - OFFSET
+    BEQ(R31, fn_update_ball_pos_update_values, R31)
+
+fn_update_ball_pos_c_one: 
+    CMPEQC(R8, 14, R0) | Check if y == HEIGHT - 1
+    BEQ(R0, fn_update_ball_pos_y_ne_height, R31)
+    XORC(R9, 1, R9) | c is updated
+    SUB(R8, R13, R8) | y is updated with y - OFFSET
+    BEQ(R31, fn_update_ball_pos_update_values, R31)
+
+fn_update_ball_pos_y_ne_height: 
+    ADD(R8, R13, R8) | y is updated with y + OFFSET
+    BEQ(R31, fn_update_ball_pos_update_values, R31)
+
+fn_update_ball_pos_update_values: 
+    ST(R7, balls_info, R16) | Store x
+    ST(R8, balls_info, R5) | Store y
+    ST(R9, balls_info, R6) | Store c
+    ST(R7, balls_info_rw, R16) | Store x
+    ST(R8, balls_info_rw, R5) | Store y
+    ST(R9, balls_info_rw, R6) | Store c
+
+fn_update_ball_pos_check_while_next:
+    ADDC(R14, 1, R14) | i += 1
+    BEQ(R31, fn_update_ball_pos_check_while, R31)
+
+fn_update_ball_pos_finish_loop: 
+
+||||||||||||||||||||||||
+| fn_update_player_pos |
+||||||||||||||||||||||||
+ADDC(R31, 0, R8) | R8 is j
+
+fn_update_player_pos_start_while_1:
+CMPLTC(R8, 2, R5) | j < 2
+BF(R5, fn_update_player_pos_end_while_1) | if false skip while loop
+    MULC(R8, 8, R10)  | R10 contains *player[i][0] (offset from player_info_rw)
+    ADDC(R10, 4, R11) | R11 contains *player[i][1]
+    
+    MULC(R8,  16, R12) | R12 contains *p_input[i][0] (offset from inputs)
+    ADDC(R12,  4, R13) | R13 contains *p_input[i][1] 
+    ADDC(R12,  8, R14) | R14 contains *p_input[i][2]
+    ADDC(R12, 12, R15) | R15 contains *p_input[i][3]
+    
+    LD(R10, players_pos_rw, R16) | R16 contains x 
+    LD(R11, players_pos_rw, R17) | R17 contains y
+    LD(R12, inputs, R18) | R18 contains up 
+    LD(R13, inputs, R19) | R19 contains down 
+    LD(R14, inputs, R20) | R20 contains aim 
+    LD(R15, inputs, R21) | R21 contains fire 
+    
+    | if up and y > 0 
+    CMPEQ(R17, 0, R5) | R5 contains y == 0 
+    XORC(R5, 1, R5)    | R5 contains y != 0 
+    AND(R18, R5, R5) | R5 contains up and y != 0
+    
+    BF(R5, fn_update_player_pos_end_if_1) | skip if block if false 
+        SUBC(R17, 1, R17) | y = y - 1 
+    fn_update_player_pos_end_if_1: 
+    
+    | if down and y < max_y
+    CMOVE(10, R9)      | R9 is max_y
+    CMPLT(R17, R9, R5) | R5 contains y < max_y
+    AND(R19, R5, R5) | R5 contains down and y < max_y
+    
+    BF(R5, fn_update_player_pos_end_if_2) | skip if block if false 
+        ADDC(R17, 1, R17) | y = y + 1
+    fn_update_player_pos_end_if_2: 
+     
+    ST(R17, players_pos, R11) | players_pos[player] = y
+    ST(R17, players_pos_rw, R11) | players_pos[player] = y
+
+    | if fire 
+    BF(R21, fn_update_player_pos_end_if_fire)
+
+        | if player doesn't have enough ammo, don't fire
+        |   if R8 == 0 (i.e. player 1), check player 1 ammo, otherwise check player 2
+        BNE(R8, fn_update_player_pos_if_fire_p2_ammo_check, R31)
+
+        fn_update_player_pos_if_fire_p1_ammo_check:
+        BEQ(R2, fn_update_player_pos_end_if_fire, R31)
+        BR(fn_update_player_pos_if_fire_ammo_check_done)
+
+        fn_update_player_pos_if_fire_p2_ammo_check:
+        BEQ(R4, fn_update_player_pos_end_if_fire, R31)
+
+        fn_update_player_pos_if_fire_ammo_check_done:
+
+        ADDC(R31, 0, R22) | R22 contains ball_i
+
+        | Launch next available ball:
+        | Look through all available balls
+        | If we have a ball that 
+        fn_update_player_pos_start_while_2:
+        CMPLTC(R22, 3, R5) | R5 contains ball_i < 3 
+       BF(R5, fn_update_player_pos_end_while_2)
+           MULC(R8, 9, R23) | R23 contains ball_pos[player_i]
+           MULC(R22, 3, R6) | R6 contains  
+
+           ADD(R23, R6, R23) | R23 contains ball_no 
+           ADDC(R23, 1, R24) | R24 contains ball_no + 1
+           ADDC(R23, 2, R25) | R25 contains ball_no + 2 
+           MULC(R23, 4, R23) | R23 contains address of ball_no
+           MULC(R24, 4, R24) | R24 contains address of ball_no + 1
+           MULC(R25, 4, R25) | R25 contains address of ball_no + 2
+
+           | if balls_info[ball_no].x == 32 and balls_info[ball_no+1].y == 32 and balls_info[ball_no+2].c == 32
+           | balls_info[ball_no].x == 32 
+           LD(R23, balls_info_rw, R5) | R5 contains balls_info[ball_no].x
+           CMPEQC(R5, 32, R5) | R5 contains balls_info[ball_no] == 32 
+
+           LD(R24, balls_info_rw, R6) | R6 contains balls_info[ball_no+1].x
+           CMPEQC(R6, 32, R6) | R6 contains balls_info[ball_no+1] == 32 
+
+           AND(R5, R6, R6) | R6 contains balls_info[ball_no] == 32 and balls_info[ball_no+1] == 32
+           
+           LD(R25, balls_info_rw, R7) | R7 contains balls_info[ball_no+2]
+           CMPEQC(R7, 32, R7) | R7 contains balls_info[ball_no+2] == 32 
+           AND(R6, R7, R7) | R7 contains condition for if statement 
+           
+           BF(R7, fn_update_player_pos_end_if_3) | skip if block if false 
+               | spawn ball at middle of paddle 
+               || MULC(R8, -2, R5) | R5 contains j*-2
+               || ADDC(R5, 1, R5) | R5 contains 1+j*-2
+               || ADD(R16, R5, R5) | R5 contains x + 1+j*-2
+            
+               BF(R16, fn_update_player_pos_x_is_zero) | if x == 0 
+               
+               fn_update_player_pos_x_is_not_zero: | x == 29 
+               SUBC(R16, 1, R5)
+               BR(fn_update_player_pos_set_x)
+
+               fn_update_player_pos_x_is_zero:
+               ADDC(R16, 1, R5)
+
+               fn_update_player_pos_set_x:
+               ST(R5, balls_info, R23) | balls_info[ball_no] = x + 1-2*j
+               ST(R5, balls_info_rw, R23) | balls_info[ball_no] = x + 1-2*j
+
+               ADDC(R17, 2, R6) | R6 contains y + 2
+               ST(R6, balls_info, R24) | balls_info[ball_no+1] = y + 2 
+               ST(R6, balls_info_rw, R24) | balls_info[ball_no+1] = y + 2 
+
+               ST(R20, balls_info, R25) | balls_info[ball_no+2] = aim 
+               ST(R20, balls_info_rw, R25) | balls_info[ball_no+2] = aim 
+               | update ammo of player: if player == 0
+               BEQ(R10, fn_update_player_posend_else_4, R31)
+                   | if player == 2, update player 2 ammo 
+                   SUBC(R4, 1, R4) | p2 ammo -= 1  
+                   BR(fn_update_player_posend_endif_4) | jump to 
+
+                   fn_update_player_posend_else_4: 
+                   | else if player == 0, update player 1 ammo 
+                   SUBC(R2, 1, R2) | p1 ammo -= 1  
+               fn_update_player_posend_endif_4:
+
+               ADDC(R31, 3, R22) | b = 3
+
+           fn_update_player_pos_end_if_3:
+           ADDC(R22, 1, R22) |  b = b + 1 
+           BR(fn_update_player_pos_start_while_2) | loop back while 2 
+
+    fn_update_player_pos_end_while_2:
+    fn_update_player_pos_end_if_fire:
+
+    ADDC(R8, 1, R8) | j = j + 1 
+    BR(fn_update_player_pos_start_while_1) | loop back while 1 
+
+fn_update_player_pos_end_while_1:
+
+
+wait_for_frame_low:
+| break to start of game if game becomes over
+ANDC(R26, 0x4, R0)
+BF(R0, wait_for_game_start)
+
+ANDC(R26, 0x1, R0)
+BT(R0, wait_for_frame_low)
+
+
+wait_for_frame_high:
+| break to start of game if game becomes over
+
+ANDC(R26, 0x4, R0)
+BF(R0, wait_for_game_start)
+
+ANDC(R26, 0x1, R0)
+BF(R0, wait_for_frame_high)
+
+BR(main)

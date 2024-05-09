@@ -1,0 +1,65 @@
+module shifter #(
+  SIZE = 16 : SIZE <= 32
+)(
+    input a[SIZE],
+    input b[5],
+    input alufn_signal[6],
+    output shift[SIZE]
+  ) {
+  
+  #SIZE(SIZE){
+    //left shifters
+    x_bit_left_shifter ls16(#SHIFT(16),.shift(b[4]));
+    x_bit_left_shifter ls8(#SHIFT(8),.shift(b[3]));
+    x_bit_left_shifter ls4(#SHIFT(4),.shift(b[2]));
+    x_bit_left_shifter ls2(#SHIFT(2),.shift(b[1]));
+    x_bit_left_shifter ls1(#SHIFT(1),.shift(b[0]));
+    
+    //right shifters
+    x_bit_right_shifter rs16(#SHIFT(16),.shift(b[4]));
+    x_bit_right_shifter rs8(#SHIFT(8),.shift(b[3]));
+    x_bit_right_shifter rs4(#SHIFT(4),.shift(b[2]));
+    x_bit_right_shifter rs2(#SHIFT(2),.shift(b[1]));
+    x_bit_right_shifter rs1(#SHIFT(1),.shift(b[0]));
+    
+    //right shifter arithmetic
+    x_bit_right_shifter_arithmetic ras16(#SHIFT(16),.shift(b[4]));
+    x_bit_right_shifter_arithmetic ras8(#SHIFT(8),.shift(b[3]));
+    x_bit_right_shifter_arithmetic ras4(#SHIFT(4),.shift(b[2]));
+    x_bit_right_shifter_arithmetic ras2(#SHIFT(2),.shift(b[1]));
+    x_bit_right_shifter_arithmetic ras1(#SHIFT(1),.shift(b[0]));
+  }
+  
+  always {
+    // default values to silence errors
+    //left
+    ls16.a = SIZE > 32 ? 0 : a;
+    ls8.a = SIZE > 16 ? ls16.out : a;
+    ls4.a = SIZE > 8 ? ls8.out : a;
+    ls2.a = SIZE > 4 ? ls4.out : a;
+    ls1.a = SIZE > 2 ? ls2.out : a;
+    
+    //right
+    rs16.a = SIZE > 32 ? 0 : a;
+    rs8.a = SIZE > 16 ? rs16.out : a;
+    rs4.a = SIZE > 8 ? rs8.out : a;
+    rs2.a = SIZE > 4 ? rs4.out : a;
+    rs1.a = SIZE > 2 ? rs2.out : a;
+    
+    //right arithmetic
+    ras16.a = SIZE > 32 ? 0 : a;
+    ras8.a = SIZE > 16 ? ras16.out : a;
+    ras4.a = SIZE > 8 ? ras8.out : a;
+    ras2.a = SIZE > 4 ? ras4.out : a;
+    ras1.a = SIZE > 2 ? ras2.out : a;
+    
+    case (alufn_signal[1:0]) {
+      b00: shift = ls1.out;
+      b01: shift = rs1.out;
+      b11: shift = ras1.out;
+      default:
+        shift = a;
+    }
+    
+  }
+}

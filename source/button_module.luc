@@ -1,0 +1,65 @@
+module button_module #(BUTTON_NUM=12)(
+    input clk,  // clock
+    input rst,
+    input game_clock,
+    input button_inputs[BUTTON_NUM], //Buttons 4 buttons x 2 players
+    output io_button_values[BUTTON_NUM],
+    output packaged_output_values[8][2]
+  ) {
+  // manual next button to advance one instruction
+  button_conditioner button_conditioned[BUTTON_NUM](.clk(clk));
+  edge_detector button_edge[BUTTON_NUM](#RISE(1), #FALL(0), .clk(clk));  
+
+  edge_detector update_tick(#RISE(1), #FALL(0), .clk(clk), .in(game_clock)); 
+
+  dff io_button_values_dff[12](.clk(clk),.rst(rst));
+
+  edge_detector fire_edges[2](#RISE(1), #FALL(0), .clk(clk));
+  dff fire_holders_2[2](.clk(clk),.rst(rst));
+
+  dff dff_clear_delay[12](.clk(clk), .rst(update_tick.out));
+
+
+  always {
+    // connect hardware interrupt button
+    button_conditioned.in = button_inputs;
+    button_edge.in = button_conditioned.out;
+
+    io_button_values_dff.d = io_button_values_dff.q|button_edge.out;
+
+    fire_edges.in[0] = &button_conditioned.out[3:2];
+    fire_edges.in[1] = &button_conditioned.out[9:8];
+    fire_holders_2.d [0] = fire_holders_2.q[0]|fire_edges.out[0];
+    fire_holders_2.d [1] = fire_holders_2.q[1]|fire_edges.out[1];
+
+    // Clear the input dff's only *after* program has run
+    // (conservatively, 1000 clock cycles / instructions after clock rise)
+    if (game_clock) {
+      if (dff_clear_delay.q < d1024) {
+        dff_clear_delay.d = dff_clear_delay.q + 1;
+      } else {
+        dff_clear_delay.d = dff_clear_delay.q;
+      }
+
+      if (dff_clear_delay.q == d1000) {
+        io_button_values_dff.d = BUTTON_NUMx{1b0};
+        fire_holders_2.d = 2b0;
+      }
+    }
+
+    
+    packaged_output_values = {
+      c{1b0, fire_holders_2.q[1]},
+      c{~(|button_conditioned.out[11:10]), button_conditioned.out[10]},
+      c{1b0, io_button_values_dff.q[6]},
+      c{1b0, io_button_values_dff.q[7]},
+
+      c{1b0, fire_holders_2.q [0]},
+      c{~(|button_conditioned.out[5:4]),  button_conditioned.out[5]},
+      c{1b0, io_button_values_dff.q[0]},
+      c{1b0, io_button_values_dff.q[1]}
+    };
+
+    io_button_values = button_conditioned.out;
+  }
+}

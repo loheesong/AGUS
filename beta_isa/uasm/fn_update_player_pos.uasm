@@ -1,0 +1,164 @@
+fn_update_player_pos:
+    | fn can access players_pos, inputs, balls_info from RAM, ammo_lives_counter from R1 R2 R3 R4
+    
+    ||||| callee entry sequence
+    PUSH(LP)
+    PUSH(BP)
+    MOVE(SP, BP)
+
+    | store registers old state to stack
+    PUSH(R5) | temp 1
+    PUSH(R6) | temp 2
+    PUSH(R7) | temp 3
+    PUSH(R8) | j 
+    PUSH(R9) | max_y
+    PUSH(R10) | player
+    PUSH(R11) | player+1
+    PUSH(R12) | p_input
+    PUSH(R13) | p_input+1
+    PUSH(R14) | p_input+2
+    PUSH(R15) | p_input+3
+    PUSH(R16) | x
+    PUSH(R17) | y
+    PUSH(R18) | up
+    PUSH(R19) | down
+    PUSH(R20) | aim 
+    PUSH(R21) | fire 
+    PUSH(R22) | b 
+    PUSH(R23) | ball_no
+    PUSH(R24) | ball_no+1
+    PUSH(R25) | ball_no+2
+
+    ||||| fn starts here 
+    ADDC(R31, 0, R8) | R8 is j
+    ADDC(R31, 10, R9) | R9 is max_y
+
+    fn_update_player_pos_start_while_1:
+    CMPLTC(R8, 2, R5) | j < 2
+    BF(R5, fn_update_player_pos_end_while_1) | if false skip while loop
+        MULC(R8, 2, R10) | R10 contains player
+        ADDC(R10, 1, R11) | R11 contains player + 1 
+        MULC(R10, 4, R10) | R10 contains address of player
+        MULC(R11, 4, R11) | R11 contains address of player + 1
+
+        MULC(R8, 4, R12) | R12 contains p_input
+        ADDC(R12, 1, R13) | R13 contains p_input + 1 
+        ADDC(R12, 2, R14) | R14 contains p_input + 2
+        ADDC(R12, 3, R15) | R15 contains p_input + 3
+        MULC(R12, 4, R12) | R12 contains address of p_input
+        MULC(R13, 4, R13) | R13 contains address of p_input + 1
+        MULC(R14, 4, R14) | R14 contains address of p_input + 2
+        MULC(R15, 4, R15) | R15 contains address of p_input + 3
+
+        LD(R10, players_pos, R16) | R16 contains x 
+        LD(R11, players_pos, R17) | R17 contains y
+        LD(R12, inputs, R18) | R18 contains up 
+        LD(R13, inputs, R19) | R19 contains down 
+        LD(R14, inputs, R20) | R20 contains aim 
+        LD(R15, inputs, R21) | R21 contains fire 
+
+        | if up and y > 0 
+        CMPLEC(R17, 0, R5) | R5 contains y <= 0 
+        XORC(R5, 1, R5) | R5 contains y > 0 
+        AND(R18, R5, R5) | R5 contains up and y > 0 
+        BF(R5, fn_update_player_pos_end_if_1) | skip if block if false 
+            SUBC(R17, 1, R17) | y = y - 1 
+        fn_update_player_pos_end_if_1: 
+
+        | if down and y < max_y
+        CMPLT(R17, R9, R5) | R5 contains y < max_y
+        AND(R19, R5, R5) | R5 contains down and y < max_y
+        BF(R5, fn_update_player_pos_end_if_2) | skip if block if false 
+            ADDC(R17, 1, R17) | y = y + 1
+        fn_update_player_pos_end_if_2: 
+        ST(R17, players_pos, R11) | players_pos[player+1] = y
+
+        | if fire 
+        BF(R21, fn_update_player_pos_end_if_fire)
+            ADDC(R31, 0, R22) | R22 contains b 
+
+            fn_update_player_pos_start_while_2:
+            CMPLTC(R22, 3, R5) | R5 contains b < 3 
+            BF(R5, fn_update_player_pos_end_while_2)
+                MULC(R8, 9, R23) | R23 contains j * 9 
+                MULC(R22, 3, R6) | R6 contains b * 3
+                ADD(R23, R6, R23) | R23 contains ball_no 
+                ADDC(R23, 1, R24) | R24 contains ball_no + 1
+                ADDC(R23, 2, R25) | R25 contains ball_no + 2 
+                MULC(R23, 4, R23) | R23 contains address of ball_no
+                MULC(R24, 4, R24) | R24 contains address of ball_no + 1
+                MULC(R25, 4, R25) | R25 contains address of ball_no + 2
+
+                | if balls_info[ball_no] == 32 and balls_info[ball_no+1] == 32 and balls_info[ball_no+2] == 32
+                | balls_info[ball_no] == 32 
+                LD(R23, balls_info, R5) | R5 contains balls_info[ball_no]
+                CMPEQC(R5, 32, R5) | R5 contains balls_info[ball_no] == 32 
+                LD(R24, balls_info, R6) | R6 contains balls_info[ball_no+1]
+                CMPEQC(R6, 32, R6) | R6 contains balls_info[ball_no+1] == 32 
+                AND(R5, R6, R6) | R6 contains balls_info[ball_no] == 32 and balls_info[ball_no+1] == 32
+                LD(R25, balls_info, R7) | R7 contains balls_info[ball_no+2]
+                CMPEQC(R7, 32, R7) | R7 contains balls_info[ball_no+2] == 32 
+                AND(R6, R7, R7) | R7 contains condition for if statement 
+                BF(R7, fn_update_player_pos_end_if_3) | skip if block if false 
+                    | spawn ball at middle of paddle 
+                    MULC(R8, -2, R5) | R5 contains j*-2
+                    ADDC(R5, 1, R5) | R5 contains 1+j*-2
+                    ADD(R16, R5, R5) | R5 contains x + 1+j*-2
+                    ST(R5, balls_info, R23) | balls_info[ball_no] = x + 1-2*j
+
+                    ADDC(R17, 2, R6) | R6 contains y + 2
+                    ST(R6, balls_info, R24) | balls_info[ball_no+1] = y + 2 
+
+                    ST(R20, balls_info, R25) | balls_info[ball_no+2] = aim 
+                    | update ammo of player: if player == 0
+                    BEQ(R10, fn_update_player_posend_else_4, R31)
+                        | if player == 2, update player 2 ammo 
+                        SUBC(R3, 1, R3) | p2 ammo -= 1  
+                        BR(fn_update_player_posend_endif_4) | jump to 
+
+                        fn_update_player_posend_else_4: 
+                        | else if player == 0, update player 1 ammo 
+                        SUBC(R1, 1, R1) | p1 ammo -= 1  
+                    fn_update_player_posend_endif_4:
+
+                    ADDC(R31, 3, R22) | b = 3
+
+                fn_update_player_pos_end_if_3:
+                ADDC(R22, 1, R22) |  b = b + 1 
+                BR(fn_update_player_pos_start_while_2) | loop back while 2 
+
+            fn_update_player_pos_end_while_2:
+        fn_update_player_pos_end_if_fire:
+        ADDC(R8, 1, R8) | j = j + 1 
+        BR(fn_update_player_pos_start_while_1) | loop back while 1 
+
+    fn_update_player_pos_end_while_1:
+
+    ||||| callee exit sequence 
+    | restore registers contents
+    POP(25) 
+    POP(24) 
+    POP(23) 
+    POP(22) 
+    POP(21) 
+    POP(20) 
+    POP(19) 
+    POP(18) 
+    POP(17) 
+    POP(16) 
+    POP(15) 
+    POP(14) 
+    POP(13) 
+    POP(12) 
+    POP(11) 
+    POP(10) 
+    POP(9) 
+    POP(8) 
+    POP(7) 
+    POP(6) 
+    POP(5) 
+ 
+    MOVE(BP,SP)
+    POP(BP)
+    POP(LP)
+    JMP(LP, R31) 

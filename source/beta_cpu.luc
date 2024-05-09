@@ -1,0 +1,150 @@
+module beta_cpu
+  #( ALU_SIZE = 16 : ALU_SIZE >= 16 & ALU_SIZE <= 32)
+  (
+    input clk,  // clock
+    input slowclk,
+    input rst,
+    input irq,
+    input instruction[32],
+    input mem_data_input[32],
+    output ia[32],
+    output mem_data_address[32],
+    output mem_data_output[32],
+    output wr,
+    output debug[4][16],
+
+    // Side channel outputs
+    output p1_hp[2],
+    output p1_ammo[2],
+    output p2_hp[2],
+    output p2_ammo[2],
+    
+    input timer_done,
+    input in_gameplay,
+    input game_tick
+  ) {
+  
+  control_unit control_system(.clk(clk), .rst(rst));
+  alu alu_system(#SIZE(ALU_SIZE));
+  regfile_unit regfile_system(.clk(clk), .rst(rst));
+  pc_unit pc_system(.clk(clk), .rst(rst));
+
+  sig asel_out[ALU_SIZE];
+  sig bsel_out[ALU_SIZE];
+  sig wdsel_out[32];
+
+  always {
+    // initial setups to silence output compilation errors
+    ia = 0;
+    mem_data_address = 0;
+    mem_data_output = 0;
+    wr = 0;
+    debug = 4x{{16h0}};
+    control_system.irq = 0;
+    control_system.slowclk = 0;
+    control_system.ia31 = 0;
+    control_system.opcode = 0;
+    control_system.z = 0;
+    regfile_system.ra2sel = 0;
+    regfile_system.wasel = 0;
+    regfile_system.ra = 0;
+    regfile_system.rb = 0;
+    regfile_system.rc = 0;
+    regfile_system.werf = 0;
+    regfile_system.slowclk = 0;
+    pc_system.slowclk = 0;
+    pc_system.id = 0;
+    pc_system.reg_data_1 = 0;
+    pc_system.pcsel = 0;
+    
+    //***** CONTROL unit ******// 
+    // connect all input terminals of Control Unit to IRQ, pc_system, instruction, regfile_system, and slowclk accordingly 
+    control_system.irq = irq;
+    control_system.slowclk = slowclk;
+    control_system.ia31 = pc_system.ia[31];
+    control_system.opcode = instruction[31:26];
+    control_system.z = regfile_system.z;
+    
+    //***** PC unit ******// 
+    // connect all input terminals of pc_system to slowclk, REGFILE, Control System, and instruction
+    // connect ia to pc_system.ia so we can use that for other parts of the datapath 
+    pc_system.slowclk = slowclk;
+    pc_system.id = instruction[15:0];
+    pc_system.reg_data_1 = regfile_system.reg_data_1;
+    pc_system.pcsel = control_system.pcsel;
+
+    //***** REGFILE unit *****//
+    // connect all regfile input ports accordingly, all read addresses and write addresses, as well as slowclk, and control signals
+    regfile_system.ra2sel = control_system.ra2sel;
+    regfile_system.wasel = control_system.wasel;
+    regfile_system.ra = instruction[20:16];
+    regfile_system.rb = instruction[15:11];
+    regfile_system.rc = instruction[25:21];
+    regfile_system.werf = control_system.werf;
+    regfile_system.slowclk = slowclk;
+
+    // Regfile side channel IO
+    p1_hp = regfile_system.p1_hp;
+    p1_ammo = regfile_system.p1_ammo;
+    p2_hp = regfile_system.p2_hp;
+    p2_ammo = regfile_system.p2_ammo;
+  
+    regfile_system.r26 = c{29b0, in_gameplay, timer_done, game_tick};
+
+    //****** ALU + WDSEL unit *******//
+    // ASEL mux
+    alu_system.alufn_signal = control_system.alufn;
+    case(control_system.asel){
+      b0:
+        asel_out = regfile_system.reg_data_1[ALU_SIZE-1:0];
+      b1:
+        asel_out = c{0, pc_system.pc_4_sxtc[ALU_SIZE-2:0]}; // supervisor bit is ignored in LDR
+      default:
+        asel_out = regfile_system.reg_data_1[ALU_SIZE-1:0];
+    }
+
+    // BSEL mux
+    case(control_system.bsel){
+      b0:
+        bsel_out = regfile_system.reg_data_2[ALU_SIZE-1:0];
+      b1:
+        bsel_out = c{(ALU_SIZE-16)x{instruction[15]}, instruction[15:0]};
+        
+      default:
+        bsel_out = regfile_system.reg_data_2[ALU_SIZE-1:0];
+    }
+
+    // WDSEL mux
+    case(control_system.wdsel){
+      b00:
+        wdsel_out = pc_system.pc_4; // Supervisor bit is already protected in pc_unit
+      b01: 
+        wdsel_out = c{(ALU_SIZE-16)x{1b0}, alu_system.out};
+      b10:
+        wdsel_out = mem_data_input;
+      default:
+        wdsel_out = alu_system.out;
+    } 
+
+    // output connections
+    ia = pc_system.ia;
+
+    // connect alu_system with asel_out and bsel_out
+    alu_system.a = asel_out;
+    alu_system.b = bsel_out;
+    // connect regfile_system with wdsel_out
+    regfile_system.wdsel_out = wdsel_out;
+    // connect signals mem_data_address with the output of the alu_system
+    mem_data_address = alu_system.out;
+    // connect mem_data_output with regfile_system
+    mem_data_output = regfile_system.mwd;
+    // finally, connect wr sig with control_system
+    wr = control_system.wr;
+    
+    // debug signals
+    debug[0][15:0] = pc_system.pc_4_sxtc[15:0];
+    debug[1][15:0] = asel_out[15:0];
+    debug[2][15:0] = bsel_out[15:0];
+    debug[3][15:0] = wdsel_out[15:0];
+  }
+}

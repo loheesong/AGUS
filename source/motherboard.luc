@@ -1,0 +1,92 @@
+module motherboard (
+    input clk,  // clock
+    input rst,  // reset
+    input slowclk, 
+    output id[32],
+    output ia[32],
+    output ma[32],  // ALU output / EA
+    output mrd[32], // Mem[EA]
+    output mwd[32], // RD2 output 
+    output output_buffer[32],
+    output input_buffer[32],
+    output debug[4][16],
+
+    // Side channel register outputs
+    output p1_hp[2],
+    output p1_ammo[2],
+    output p2_hp[2],
+    output p2_ammo[2],
+
+    // Side channel inputs
+    input timer_done,
+    input in_gameplay,
+    input game_tick,
+
+    // Button inputs
+    input buttons_packed[8][2],
+
+    // LED display outputs
+    input video_raddr[5],
+    output video_data_out[32]
+  ) {
+
+  // Beta CPU
+  beta_cpu beta(.clk(clk), #ALU_SIZE(16));
+  
+  // setup and instantiate memory unit and instruction ROM
+  const INSTRUCTION_ROM_ADDRESS_SIZE = $clog2(670)+2;
+  instruction_rom instruction_unit(#WORDS(670));
+
+  memory_unit memory_unit(#BYTES(1024), .clk(clk)); 
+  
+  // prepare output buffer
+  dff system_output_buffer[32](.clk(clk), .rst(rst)); // 32 bit beta output buffer, hardwired to always read memory_unit value at byte address 0xC
+  // prepare input buffer
+  dff system_input_buffer[32](.clk(clk), .rst(rst)); // 32 bit beta input buffer, hardwired to always write memory_unit value at byte address 0x10
+  
+  always {
+    instruction_unit.addr = 0; // always set to 0 initially
+    beta.irq = 0;
+    
+    beta.slowclk = slowclk; 
+    beta.rst = rst;
+
+    // Side channel inputs to be passed to Beta regfile
+    beta.timer_done = timer_done;
+    beta.in_gameplay = in_gameplay;
+    beta.game_tick = game_tick;
+  
+    // Instruction ROM connections
+    // no need to write to instruction rom
+    beta.instruction = instruction_unit.out;
+    // Lop off the last two digits
+    // i.e. if accessing byte 0b1100 (12), we want word 0b11 (4)
+    instruction_unit.addr = beta.ia[INSTRUCTION_ROM_ADDRESS_SIZE-1:2];
+
+    // Data memory connections
+    memory_unit.addr = beta.mem_data_address[11:0]; 
+    memory_unit.wd = beta.mem_data_output; 
+    memory_unit.we = beta.wr; 
+    beta.mem_data_input = memory_unit.data_out;
+
+    memory_unit.buttons_packed = buttons_packed;
+    memory_unit.video_raddr = video_raddr;
+    video_data_out = memory_unit.video_data_out;
+    
+    // output values
+    output_buffer = system_output_buffer.q;
+    input_buffer = system_input_buffer.q;
+    ia = beta.ia;
+    id = instruction_unit.out;
+    ma = beta.mem_data_address;
+    mrd = memory_unit.data_out;
+    mwd = beta.mem_data_output;
+    debug = beta.debug;
+    
+    // Pass register side channels out
+    p1_hp = beta.p1_hp;
+    p1_ammo = beta.p1_ammo;
+    p2_hp = beta.p2_hp;
+    p2_ammo = beta.p2_ammo;
+  }
+}

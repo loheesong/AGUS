@@ -1,0 +1,17 @@
+.=0x00
+balls_info_rw:
+
+.=0x48
+players_pos_rw:
+
+.=0x4C
+test:
+
+.=0x400
+balls_info:
+
+.=0x448
+players_pos: 
+
+.=0x800
+inputs:

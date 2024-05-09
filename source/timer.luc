@@ -1,0 +1,41 @@
+module timer (
+    input clk,  // clock
+    input rst,  // reset
+    input restart,
+    output time_left_ones[4],
+    output time_left_tens[4]
+  ) {
+  dff counter[27] (.clk(clk),.rst(rst));
+  dff ones[4](.clk(clk),.rst(rst));
+  dff tens[4](.clk(clk),.rst(rst));
+
+  always {
+    if(rst || restart){
+      ones.d = 4d9;
+      tens.d = 4d9;
+    }
+    else{
+      if(counter.q == (27d100000000 - 27b1)){
+        counter.d = 27d0;
+        if(ones.q == 4d0){
+          if(tens.q > 4d0){
+              ones.d = 4d9;
+              tens.d = tens.q - 1;
+          }
+          else{
+              ones.d = 4d0;
+              tens.d = 4d0;
+          }
+        }
+        else{
+          ones.d = ones.q - 4d1;
+        }
+      }
+      else{
+        counter.d = counter.q + 1 ;
+      }
+    }
+    time_left_ones = ones.q;
+    time_left_tens = tens.q;
+  }
+}

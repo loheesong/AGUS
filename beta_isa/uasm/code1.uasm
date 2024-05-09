@@ -1,0 +1,25 @@
+| TODO 
+| able to move player in hardcode 
+| button inputs to registers 
+
+| make all registers light up 
+ADDC(R31, 3, R1)
+ADDC(R31, 3, R2)
+ADDC(R31, 3, R3)
+ADDC(R31, 3, R4)
+
+| make player appear 
+ST(R31, players_pos) | p1 x 
+
+ADDC(R31, 1, R5)
+MULC(R5, 4, R5)
+ST(R31, players_pos, R5) | p1 y
+
+ADDC(R31, 2, R5)
+MULC(R5, 4, R5)
+ADDC(R31, 29, R6)
+ST(R6, players_pos, R5) | p2 x 
+
+ADDC(R31, 3, R5)
+MULC(R5, 4, R5)
+ST(R31, players_pos, R5) | p2 y

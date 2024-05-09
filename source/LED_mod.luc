@@ -1,0 +1,88 @@
+module led_mod #(
+    PIXEL_COUNT = 450 : PIXEL_COUNT > 0, //The number of LEDs
+    ENCODING_AMOUNT = 4 : ENCODING_AMOUNT > 0 // The number of colors.
+  )(
+    input clk,              // 100MHz clock
+    input rst_n,            // reset button (active low)
+    input color_data[PIXEL_COUNT*$clog2(ENCODING_AMOUNT)], // to the temp dff
+    input clear,
+    input update,
+    output ws2812           // to LED strip, Br pin C49, connect LED Strip to 5V for power
+  ) {
+
+  // WHITE (111), CYAN (110), YELLOW (101), GREEN (100), PURPLE (011), RED (010), BLUE (001), BLANK (000)
+  const LEDCOLOR = {24hC8C8C8, 24hC800C8, 24h00C8C8, 24h0000FF, 24hC8C800, 24h00FF00, 24hFF0000, 24h000000};
+  
+  sig rst; // reset signal
+  sig encoded_pixel_address[$clog2(PIXEL_COUNT)*$clog2(ENCODING_AMOUNT)];
+  sig current_color_encoding[$clog2(ENCODING_AMOUNT)]; 
+
+  var index;
+
+  // observed output of the strip: (if matrix is used, this is the value of the top row or first row)
+  // we will pump colors from right to left 
+  // e.g.: ABCD ---> 16 bits color encoding, for 8 pixels
+  // (connector) RED WHITE GREEN WHITE WHITE BLUE BLUE BLUE (end of strip)
+  // another e.g: E is 1110 ---> 10 first (BLUE) then 11 (WHITE)
+  // TODO: change this to suit your dimension
+  dff led_encoding[PIXEL_COUNT*$clog2(ENCODING_AMOUNT)](.clk(clk), .rst(rst), #INIT(0)); // 2 bit to encode a color per pixel
+
+  ws2812b_writer led_strip(#PIXEL_COUNT(PIXEL_COUNT), .clk(clk), .rst(rst)); 
+  fsm state(.clk(clk), .rst(rst)) = {INIT, LOAD, IDLE};
+  
+  .clk(clk) {
+    // The reset conditioner is used to synchronize the reset signal to the FPGA
+    // clock. This ensures the entire FPGA comes out of reset at the same time.
+    reset_conditioner reset_cond;
+    counter delay(.rst(rst), #DIV(25));
+  }
+  
+  always {
+    reset_cond.in = ~rst_n; // input raw inverted reset signal
+    rst = reset_cond.out;   // conditioned reset
+    led_strip.update = 0;
+    led_strip.clear = 0;
+
+    case (state.q){
+      state.IDLE:
+             if (update){
+                state.d = state.LOAD;
+              }
+             if (clear){
+                 led_strip.clear = 1;
+              }
+      
+      state.INIT: 
+           if (led_strip.reset & delay.value){ //  you need to artificially introduce some delay before sending data to the LED strip
+               state.d = state.LOAD;
+           }
+        
+      state.LOAD:
+            // wait until we are at RESET state before we decide to refresh the screen
+            if (led_strip.reset){
+                // tell the LED to update the pixels
+                led_strip.update = 1;
+                led_encoding.d = color_data;
+                state.d = state.IDLE;
+            }
+    }
+    
+    // led_strip.pixel_address will vary between 0000 to 1100 
+    // address 0 --> encoding bit 1:0 
+    // address 1 --> encoding bit 3:2 
+    // address 2 --> encoding bit 5
+    // address N --> encoding bit N*2+1:N*2
+
+    encoded_pixel_address = led_strip.pixel_address * $clog2(ENCODING_AMOUNT);
+ 
+   // get current color encoding for this pixel
+    for (index=0; index<$clog2(ENCODING_AMOUNT); index++){
+       current_color_encoding[index] = led_encoding.q[encoded_pixel_address+index];
+    }
+    
+    // based on the encoding extracted from dff led_encoding, we get the 24bit color value
+    led_strip.color = LEDCOLOR[current_color_encoding]; 
+    ws2812=led_strip.led;
+    
+  }
+}

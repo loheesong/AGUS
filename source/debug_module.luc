@@ -1,0 +1,122 @@
+module debug_module (
+    input clk,              // 100MHz clock
+    input rst,            // reset button (active low)
+    input io_button,    // 5 buttons on IO Shield (but only io_button[0] can be used
+    input io_dip [2][8],    // DIP switches on IO Shield
+    output io_led [2][8],   // LEDs on IO Shield Alternate LEDs
+    output led [8],         // 8 user controllable LEDs
+    output motherboard_slowclk,
+    input motherboard_debug [4][16],
+    input motherboard_id [32],
+    input motherboard_ia [32],
+    input motherboard_ma [32],
+    input motherboard_mwd [32],
+    input motherboard_mrd [32],
+    input motherboard_input_buffer [32],
+    input motherboard_output_buffer [32]
+  ) {
+
+  // helper signals
+  sig next;
+  sig debug_pcsel[16];
+  sig debug_asel[16];
+  sig debug_bsel[16];
+  sig debug_wdsel[16];
+
+  
+  // manual next button to advance one instruction
+  dff next_button(.clk(clk));
+  button_conditioner next_button_conditioner(.clk(clk));
+  edge_detector next_button_edge(#RISE(1), #FALL(0), .clk(clk));
+  
+
+  // to run beta at slower clock than FPGA clock
+  counter frequency_divider(#SIZE(28), .clk(clk), .rst(rst));
+  edge_detector slowclock_edge(#RISE(1), #FALL(0), .clk(clk));
+  edge_detector fastclock_edge(#RISE(1), #FALL(0), .clk(clk)); 
+  
+  always {
+    
+    io_led = 2x{{h00}};       // turn all LED off at first
+
+    
+    led[5:0] = c{1b0, io_button};  // connect buttons to LEDs
+    led[7] = io_dip[1][7]; // see toggle manual/auto mode
+    led[6] = io_dip[1][6]; // see toggle fastclock 
+    io_led[1][1] = frequency_divider.value[27]; 
+    io_led[1][0] = frequency_divider.value[25];  
+    
+    // next button
+    next_button_conditioner.in = io_button[0];
+    next_button_edge.in = next_button_conditioner.out;
+    next_button.d = next_button_edge.out;
+    
+    // driving the beta 
+    slowclock_edge.in = frequency_divider.value[27];
+    fastclock_edge.in = frequency_divider.value[25];
+    
+    
+    next = (slowclock_edge.out & io_dip[1][7]) | next_button.q; // proceed either when next button is pressed or io_dip[2][7] is 1
+
+    if (io_dip[1][6]){ // want faster clock
+     next = (fastclock_edge.out & io_dip[1][7]) | next_button.q; 
+    }
+    
+    motherboard_slowclk = next;
+    
+    debug_pcsel = motherboard_debug[0];
+    debug_asel = motherboard_debug[1];
+    debug_bsel = motherboard_debug[2];
+    debug_wdsel = motherboard_debug[3];
+
+    case (io_dip[0]){
+      h00: // MSB 16 bits of current instruction (id[31:16])
+      io_led[0] = motherboard_id[23:16];
+      io_led[1] = motherboard_id[31:24];
+    h01: // LSB 16 bits of current instruction (id[15:0])
+      io_led[0] = motherboard_id[7:0];
+      io_led[1] = motherboard_id[15:8];
+    h02: // LSB 16 bits of instruction address (ia[15:0])
+      io_led[0] = motherboard_ia[7:0];
+      io_led[1] = motherboard_ia[15:8];
+    h03: // LSB 16 bits of EA (this is also ALU output) (ma[15:0])
+      io_led[0] = motherboard_ma[7:0];
+      io_led[1] = motherboard_ma[15:8];
+    h04: // MSB 16 bits of EA (this is also ALU output) (ma[31:16])
+      io_led[0] = motherboard_ma[23:16];
+      io_led[1] = motherboard_ma[31:24];
+    h05: // LSB 16 bits of Mem[EA] (mrd[15:0])
+      io_led[0] = motherboard_mrd[7:0];
+      io_led[1] = motherboard_mrd[15:8];
+    h06: // MSB 16 bits of Mem[EA] (mrd[31:16])
+      io_led[0] = motherboard_mrd[23:16];
+      io_led[1] = motherboard_mrd[31:24];
+    h07: // LSB 16 bits of RD2 (mwd[15:0]) 
+      io_led[0] = motherboard_mwd[7:0];
+      io_led[1] = motherboard_mwd[15:8];
+    h08: // MSB 16 bits of RD2 (mwd[31:16])
+      io_led[0] = motherboard_mwd[23:16];
+      io_led[1] = motherboard_mwd[31:24];
+    h09: // LSB 16 bits of pcsel_out
+      io_led[0] = debug_pcsel[7:0];
+      io_led[1] = debug_pcsel[15:8];
+    h0A: // LSB 16 bits of asel_out
+      io_led[0] = debug_asel[7:0];
+      io_led[1] = debug_asel[15:8];
+    h0B: // LSB 16 bits of bsel_out
+      io_led[0] = debug_bsel[7:0];
+      io_led[1] = debug_bsel[15:8];
+    h0C: // LSB 16 bits of wdsel_out
+      io_led[0] = debug_wdsel[7:0];
+      io_led[1] = debug_wdsel[15:8];
+    h0D: // MSB 16 bits of instruction address. Useful to see PC31 (kernel/user mode) (ia[31:16])
+      io_led[0] = motherboard_ia[31:24];
+      io_led[1] = motherboard_ia[23:16];
+    h0E: // LSB 16 bits of system_input_buffer 
+      io_led[1:0] = {motherboard_input_buffer[15:8], motherboard_input_buffer[7:0]};
+    h0F: // LSB 16 bits of system_output_buffer 
+      io_led[1:0] = {motherboard_output_buffer[15:8], motherboard_output_buffer[7:0]};
+    
+    }
+  }
+}

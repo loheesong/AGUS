@@ -1,0 +1,11 @@
+.=0x400
+balls_info: | write only here 
+
+.=0x448
+players_pos: 
+
+.=0x800
+inputs:
+
+|balls_info_rw:
+| another location to read and write balls_info

@@ -1,0 +1,101 @@
+fn_update_ball_pos:
+    PUSH(LP)	
+	PUSH(BP)	
+	MOVE(SP,BP)	
+
+    | PUSH all used registers
+	PUSH(R13)
+	PUSH(R14)
+	PUSH(R15)
+	PUSH(R16)
+	PUSH(R5)
+	PUSH(R6)
+	PUSH(R7)
+	PUSH(R8)
+	PUSH(R9)
+	PUSH(R10)
+	PUSH(R11)
+	PUSH(R12)
+
+    ADDC(R31, 1, R13) | R13 contains OFFSET
+    ADDC(R31, 0, R14) | R14 contains i
+    ADDC(R31, 6, R15) | R15 contains 6
+
+    fn_update_ball_pos_check_while: 
+        CMPLT(R14, R15, R0) | check if i < 6
+        BEQ(R0, fn_update_ball_pos_finish_loop, R31)
+        MULC(R14, 3, R16) | R16 contains Ball
+        ADDC(R16, 1, R5) | R5 contains Ball + 1
+        ADDC(R16, 2, R6) | R6 contains Ball + 2
+        MULC(R16, 4, R16) | R16 is address of Ball
+        MULC(R5, 4, R5) | R5 is address of Ball + 1
+        MULC(R6, 4, R6) | R6 is address of Ball + 2
+
+        LD(R16, balls_info, R7) | R7 contains x
+        LD(R5, balls_info, R8) | R8 contains y
+        LD(R6, balls_info, R9) | R9 contains c
+
+        CMPEQC(R7, 32, R10) | R10 contains !(x != 32)
+        XORC(R10, 1, R10) | R10 contains (x! = 32)
+
+        CMPLTC(R14, 3, R11) | R11 contains !(i >= 3)
+        XORC(R11, 1, R11) | R11 contains (i >= 3)
+        MULC(R11, 2, R11) | R11 contains 2*(i >= 3)
+        SUB(R13, R11, R11) | R11 contains (OFFSET - 2*(i >= 3))
+        MUL(R10, R11, R10) |R10 contains (x != 32)*(OFFSET - 2*(i>=3))
+        ADD(R7, R10, R7) | R7 contains the updated x
+
+        BEQ(R9, fn_update_ball_pos_c_zero, R31) | Branch to fn_update_ball_pos_c_zero if c is 0
+        CMPEQC(R9, 1, R0) | Check if c is 1
+        BNE(R0, fn_update_ball_pos_c_one, R31)| Branch to fn_update_ball_pos_c_one if c is 1
+        BEQ(R31, fn_update_ball_pos_update_values, R31)
+
+    fn_update_ball_pos_c_zero: 
+        BNE(R8, fn_update_ball_pos_y_notzero, R31)
+        XORC(R9, 1, R9) | c is updated
+        ADD(R8, R13, R8) | y is updated with y + OFFSET
+        BEQ(R31, fn_update_ball_pos_update_values, R31)
+
+    fn_update_ball_pos_y_notzero: 
+        SUB(R8, R13, R8) | y is updated with y - OFFSET
+        BEQ(R31, fn_update_ball_pos_update_values, R31)
+
+    fn_update_ball_pos_c_one: 
+        LD(R31, HEIGHT, R12) |R12 contains HEIGHT
+        SUBC(R12, 1, R12) | R12 contains HEIGHT - 1
+        CMPEQ(R8, R12, R0) | Check if y == HEIGHT - 1
+        BEQ(R0, fn_update_ball_pos_y_ne_height, R31)
+        XORC(R9, 1, R9) | c is updated
+        SUB(R8, R13, R8) | y is updated with y - OFFSET
+        BEQ(R31, fn_update_ball_pos_update_values, R31)
+
+    fn_update_ball_pos_y_ne_height: 
+        ADD(R8, R13, R8) | y is updated with y + OFFSET
+        BEQ(R31, fn_update_ball_pos_update_values, R31)
+
+    fn_update_ball_pos_update_values: 
+        ST(R7, balls_info, R16) | Store x
+        ST(R8, balls_info, R5) | Store y
+        ST(R9, balls_info, R6) | Store c
+        ADDC(R14, 1, R14) |i += 1
+        BEQ(R31, fn_update_ball_pos_check_while, R31)
+
+
+    fn_update_ball_pos_finish_loop: 
+    | POP saved registers above in reverse order
+	POP(R12)
+	POP(R11)
+	POP(R10)
+	POP(R9)
+	POP(R8)
+	POP(R7)
+	POP(R6)
+	POP(R5)
+	POP(R16)
+	POP(R15)
+	POP(R14)
+	POP(R13)
+	MOVE(BP,SP)
+	POP(BP)
+	POP(LP)
+	RTN()

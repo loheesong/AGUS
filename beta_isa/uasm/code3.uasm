@@ -1,0 +1,22 @@
+||||| Test: R2 is p1 fire, R1 is p2 fire
+CMOVE(2, R3)
+CMOVE(2, R4)
+
+main:
+| left right aim fire left right aim fire 
+CMOVE(3, R5)
+MULC(R5, 4, R5)
+LD(R5, inputs, R2) | R2 is p1 fire 
+CMOVE(7, R5)
+MULC(R5, 4, R5)
+LD(R5, inputs, R1) | R1 is p2 fire 
+
+wait_for_frame_low:
+ANDC(R26, 0x1, R0)
+BT(R0, wait_for_frame_low)
+
+wait_for_frame_high:
+ANDC(R26, 0x1, R0)
+BF(R0, wait_for_frame_high)
+
+BR(main)

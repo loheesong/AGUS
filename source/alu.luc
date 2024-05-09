@@ -1,0 +1,60 @@
+module alu #(
+  SIZE = 16 : SIZE <= 32
+)(
+    input a[SIZE],
+    input b[SIZE],
+    input alufn_signal[6],
+    output out[SIZE],
+    output z,
+    output v,
+    output n
+  ) {
+  
+  #SIZE(SIZE){
+    adder adder;
+    boolean boolean;
+    shifter shifter;
+    compare compare; 
+    multiplier multiplier;
+    
+    mux_2_xbit multiplier_select;
+    mux_4_xbit output_mux;
+  }
+  always {
+    adder.a = a;
+    adder.b = b;
+    adder.alufn_signal = alufn_signal;
+    
+    boolean.a = a;
+    boolean.b = b;
+    boolean.alufn_signal = alufn_signal;
+    
+    shifter.a = a;
+    shifter.b = b[4:0];
+    shifter.alufn_signal = alufn_signal;
+    
+    compare.z = adder.z;
+    compare.v = adder.v;
+    compare.n = adder.n;
+    compare.alufn_signal = alufn_signal;
+    
+    multiplier.a = a;
+    multiplier.b = b;
+    
+    // switch between multiplier and adder based on alufn_signal[1]
+    // opcodes for adder:     0b00000x
+    // opcode for multiplier: 0b00001x
+    multiplier_select.s0 = alufn_signal[1];
+    multiplier_select.in = {multiplier.mul, adder.s};
+    
+    output_mux.s0 = alufn_signal[4];
+    output_mux.s1 = alufn_signal[5];
+    
+    output_mux.in = {compare.out, shifter.shift, boolean.c, multiplier_select.out};
+    
+    z = adder.z;
+    v = adder.v;
+    n = adder.n;
+    out = output_mux.out;
+  }
+}

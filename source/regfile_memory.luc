@@ -1,0 +1,47 @@
+module regfile_memory (
+    input clk,  // clock
+    input rst, // reset
+    input read_address_1[5],
+    input read_address_2[5],
+    input write_address[5],
+    input write_data[32],
+    input write_enable,
+    output reg_data_1[32],
+    output reg_data_2[32],
+    
+    // Side channel IO for application FSM and outputs
+    input r26[32],
+    output p1_hp[2],
+    output p1_ammo[2],
+    output p2_hp[2],
+    output p2_ammo[2]
+  ) {
+  
+  dff registers[32][32](#INIT(32x{{32h0}}), .clk(clk), .rst(rst));
+  
+  always {
+  
+    // initial setups to silence output compilation errors
+    reg_data_1 = 0;
+    reg_data_2 = 0;
+    
+    // implement two output read ports
+    reg_data_1 = &read_address_1 ? 32b0 : registers.q[read_address_1];
+    reg_data_2 = &read_address_2 ? 32b0 : registers.q[read_address_2];
+    
+    // implement one write port 
+    // check if(write_en) and that we are not writing to R31 and R26
+    if(write_enable && (write_address!=5d31) && (write_address!=5d26)){
+        registers.d[write_address] = write_data;
+    }
+    
+    //hard-wired inputs
+    registers.d[26] = r26;
+    
+    // Side-channel outputs
+    p1_hp   = registers.q[1][1:0];
+    p1_ammo = registers.q[2][1:0];
+    p2_hp   = registers.q[3][1:0];
+    p2_ammo = registers.q[4][1:0];
+  }
+}

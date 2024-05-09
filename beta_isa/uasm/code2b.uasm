@@ -1,0 +1,46 @@
+||||| Test: see player inputs on R1 2 3 4
+
+ST(R31, players_pos)
+CMOVE(4, R5)
+CMOVE(7, R6)
+ST(R6, players_pos, R5) | p1 y is 7
+CMOVE(8, R5)
+CMOVE(29, R6)
+ST(R6, players_pos, R5)
+CMOVE(12, R5)
+ST(R31, players_pos, R5)
+
+| must write twice 
+ST(R31, players_pos_rw)
+CMOVE(4, R5)
+CMOVE(7, R6)
+ST(R6, players_pos_rw, R5) | p1 y is 7
+CMOVE(8, R5)
+CMOVE(29, R6)
+ST(R6, players_pos_rw, R5)
+CMOVE(12, R5)
+ST(R31, players_pos_rw, R5)
+
+main:
+| get input 
+| up down aim fire up down aim fire 
+LD(inputs, R1) | R1 = p1 left input 
+CMOVE(4, R5)
+LD(R5, inputs, R2) | R2 = p1 right input 
+
+CMOVE(16, R5)
+LD(R5, inputs, R3) | R3 = p2 right (up)
+CMOVE(20, R5)
+LD(R5, inputs, R4) | R4 = p2 left (down)
+
+next:
+
+wait_for_frame_low:
+ANDC(R26, 0x1, R0)
+BT(R0, wait_for_frame_low)
+
+wait_for_frame_high:
+ANDC(R26, 0x1, R0)
+BF(R0, wait_for_frame_high)
+
+BR(main)

@@ -1,0 +1,136 @@
+module video_loader (
+  input clk,
+  input rst,
+  input game_clock,
+
+  input  video_data[32],
+  output video_raddr[5],
+
+  output p1_b1_x[6], // Ball positions
+  output p1_b1_y[6],
+  output p1_b2_x[6],
+  output p1_b2_y[6],
+  output p1_b3_x[6],
+  output p1_b3_y[6],
+  output p2_b1_x[6],
+  output p2_b1_y[6],
+  output p2_b2_x[6],
+  output p2_b2_y[6],
+  output p2_b3_x[6],
+  output p2_b3_y[6],
+  output player1[6], // P1 Y position
+  output player2[6] // P2 Y positoin
+) {
+
+  dff read_p1_b1_x[6](.clk(clk), .rst(rst));
+  dff read_p1_b1_y[6](.clk(clk), .rst(rst));
+  dff read_p1_b2_x[6](.clk(clk), .rst(rst));
+  dff read_p1_b2_y[6](.clk(clk), .rst(rst));
+  dff read_p1_b3_x[6](.clk(clk), .rst(rst));
+  dff read_p1_b3_y[6](.clk(clk), .rst(rst));
+  dff read_p2_b1_x[6](.clk(clk), .rst(rst));
+  dff read_p2_b1_y[6](.clk(clk), .rst(rst));
+  dff read_p2_b2_x[6](.clk(clk), .rst(rst));
+  dff read_p2_b2_y[6](.clk(clk), .rst(rst));
+  dff read_p2_b3_x[6](.clk(clk), .rst(rst));
+  dff read_p2_b3_y[6](.clk(clk), .rst(rst));
+  dff read_player1[6](.clk(clk), .rst(rst));
+  dff read_player2[6](.clk(clk), .rst(rst));
+
+
+  edge_detector game_tick(#RISE(1), #FALL(0), .clk(clk), .in(game_clock)); 
+  dff read_delay[12](.clk(clk), .rst(game_tick.out));
+  dff address[5](.clk(clk), .rst(game_tick.out));
+
+
+  always {
+    video_raddr = address.q;
+
+    if (read_delay.q < d1024) {
+      read_delay.d = read_delay.q + 1;
+    } else {
+      read_delay.d = read_delay.q;
+    }
+
+    if (read_delay.q == d1024) {
+      if (address.q <= h16) {
+        address.d = address.q + 1;
+
+        // video_data will read as the contents of the *previous* address
+        // check for that instead.
+        
+        case (address.q - 1) {
+          h00:
+            read_p1_b1_x.d = video_data[5:0];
+          h01:
+            read_p1_b1_y.d = video_data[5:0];
+
+          h03:
+            read_p1_b2_x.d = video_data[5:0];
+          h04:
+            read_p1_b2_y.d = video_data[5:0];
+
+          h06:
+            read_p1_b3_x.d = video_data[5:0];
+          h07:
+            read_p1_b3_y.d = video_data[5:0];
+
+          h09:
+            read_p2_b1_x.d = video_data[5:0];
+          h0A:
+            read_p2_b1_y.d = video_data[5:0];
+
+          h0C:
+            read_p2_b2_x.d = video_data[5:0];
+          h0D:
+            read_p2_b2_y.d = video_data[5:0];
+
+          h0F:
+            read_p2_b3_x.d = video_data[5:0];
+          h10:
+            read_p2_b3_y.d = video_data[5:0];
+
+
+          h13:
+            read_player1.d = video_data[5:0];
+          h15:
+            read_player2.d = video_data[5:0];
+        }
+      } else {
+        address.d = address.q;
+      }
+    } else {
+      read_p1_b1_x.d = read_p1_b1_x.q;
+      read_p1_b1_y.d = read_p1_b1_y.q;
+      read_p1_b2_x.d = read_p1_b2_x.q;
+      read_p1_b2_y.d = read_p1_b2_y.q;
+      read_p1_b3_x.d = read_p1_b3_x.q;
+      read_p1_b3_y.d = read_p1_b3_y.q;
+      read_p2_b1_x.d = read_p2_b1_x.q;
+      read_p2_b1_y.d = read_p2_b1_y.q;
+      read_p2_b2_x.d = read_p2_b2_x.q;
+      read_p2_b2_y.d = read_p2_b2_y.q;
+      read_p2_b3_x.d = read_p2_b3_x.q;
+      read_p2_b3_y.d = read_p2_b3_y.q;
+      read_player1.d = read_player1.q;
+      read_player2.d = read_player2.q;
+    }
+
+
+    // tie the dffs to output
+    p1_b1_x = read_p1_b1_x.q;
+    p1_b1_y = read_p1_b1_y.q;
+    p1_b2_x = read_p1_b2_x.q;
+    p1_b2_y = read_p1_b2_y.q;
+    p1_b3_x = read_p1_b3_x.q;
+    p1_b3_y = read_p1_b3_y.q;
+    p2_b1_x = read_p2_b1_x.q;
+    p2_b1_y = read_p2_b1_y.q;
+    p2_b2_x = read_p2_b2_x.q;
+    p2_b2_y = read_p2_b2_y.q;
+    p2_b3_x = read_p2_b3_x.q;
+    p2_b3_y = read_p2_b3_y.q;
+    player1 = read_player1.q;
+    player2 = read_player2.q;
+  }
+}

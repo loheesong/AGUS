@@ -1,0 +1,40 @@
+module compare #(
+  SIZE = 16 : SIZE <= 32
+)(
+  input z,
+  input v,
+  input n,
+  input alufn_signal[6],
+  output out[SIZE]
+) {
+  // ALUFN_SIGNAL will match pattern: 6b11ABB1
+  // where A := whether to invert the output
+  // and BB := index for operations: [0, EQ, LT, LTE]
+
+  // output signal before optional NOT
+  sig pre_invert_output;
+  sig v_xor_n;
+
+  always {
+    v_xor_n = v ^ n;
+
+    // select the comparison
+    case (alufn_signal[2:1]) {
+      b01:
+        pre_invert_output = c{(SIZE-1)x{1b0}, z};
+      b10:
+        pre_invert_output = c{(SIZE-1)x{1b0}, v_xor_n};
+      b11:
+        pre_invert_output = c{(SIZE-1)x{1b0}, z | v_xor_n};
+      default:
+        pre_invert_output = 0;
+    }
+
+    // select whether the output wil be inverted
+    if (alufn_signal[3]) {
+      out = !pre_invert_output;
+    } else {
+      out = pre_invert_output;
+    }
+  }
+}

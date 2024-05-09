@@ -1,0 +1,20 @@
+module status_led (
+    input p1_stats[2][2],  // from memory
+    input p2_stats[2][2],  // from memory
+    output led_pins[12]
+  ) {
+
+  always {
+    //Player 1 Lives [2:0]
+    led_pins[2:0] = c{&p1_stats[0],p1_stats[0][1],|p1_stats[0]};
+    
+    //Player 1 ammo [5:3]
+    led_pins[5:3] = c{&p1_stats[1],p1_stats[1][1],|p1_stats[1]};
+    
+    //Player 2 Lives [8:6],
+    led_pins[8:6] = c{&p2_stats[0],p2_stats[0][1],|p2_stats[0]};
+    
+    //Player 2 ammo [11:9]
+    led_pins[11:9] = c{&p2_stats[1],p2_stats[1][1],|p2_stats[1]};
+  }
+}

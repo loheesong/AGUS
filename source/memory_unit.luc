@@ -1,0 +1,106 @@
+// supports byte addressable
+module memory_unit #(
+  BYTES = 256 // # of bytes in application memory
+)
+(
+    input clk,  // clock
+    
+    // Address from CPU, byte-addressed
+    // the two MSBs are used for device select:
+    // 00 for main memory, 01 for video buffer, 10 for input buffer
+    input addr[$clog2(BYTES) + 2],
+
+    // Data to write from CPU
+    input wd[32],
+
+    // Write enable from CPU
+    input we,
+
+    // Data out to CPU
+    output data_out[32],
+
+    // Button inputs from module
+    input buttons_packed[8][2],
+
+    // Side channel output for LED screen
+    input video_raddr[5], // byte addressed (address space 0x00 - 0x15)
+    output video_data_out[32]
+  ) {
+
+  // #DEPTH takes a word count; since we have 4-byte words, divide bytes by 4
+  simple_dual_ram data_memory(#SIZE(32), #DEPTH(BYTES / 4), .wclk(clk), .rclk(clk));
+ 
+  simple_dual_ram video_buffer(#SIZE(32), #DEPTH(22), .wclk(clk), .rclk(clk));
+
+  // two MSBs of incoming address
+  sig device_select[2];
+  // remaining bits of incoming address are used for addressing within a device
+  // devices are word addressed
+  sig physical_addr[$clog2(BYTES) - 2];
+  
+  always {
+    // Grab the two MSBs
+    device_select = addr[$clog2(BYTES)+1:$clog2(BYTES)+0];
+    // Use the rest of the bits as address for each device
+    // All devices here are word-addressed, so lop off the last 2 bits
+    physical_addr = addr[$clog2(BYTES)-1:2];
+
+    // memory_unit is word addressable in Lucid, ignore two LSB
+    data_memory.raddr = physical_addr; 
+    data_memory.waddr = physical_addr;
+    video_buffer.waddr = physical_addr[4:0];
+
+    // Unless we select the device, don't write to any of the memories
+    data_memory.write_en = 0;
+    data_memory.write_data = 0;
+    video_buffer.write_en = 0;
+    video_buffer.write_data = 0;
+
+    // Video buffer will be read from LED driver with physical address
+    // (i.e. 0x00 - 0x15, enough to address 22 words)
+    video_buffer.raddr = video_raddr;
+    video_data_out = video_buffer.read_data;
+
+    case (device_select) {
+      b00: // Application memory
+        data_out = data_memory.read_data;
+        data_memory.write_data = wd;
+        data_memory.write_en = we;
+
+      b01: // Video buffer
+        // Video buffer will be written by CPU
+        data_out = 0; // Write-only buffer, don't return anything
+        video_buffer.write_data = wd;
+        video_buffer.write_en = we;
+
+      b10: // Input buffer
+        // data_out = c{30b0, buttons_packed[physical_addr[1:0]]};
+        case (physical_addr[2:0]) {
+          3d0:
+            data_out = c{30b0, buttons_packed[0]};
+          3d1:
+            data_out = c{30b0, buttons_packed[1]};
+          3d2:
+            data_out = c{30b0, buttons_packed[2]};
+          3d3:
+            data_out = c{30b0, buttons_packed[3]};
+          3d4:
+            data_out = c{30b0, buttons_packed[4]};
+          3d5:
+            data_out = c{30b0, buttons_packed[5]};
+          3d6:
+            data_out = c{30b0, buttons_packed[6]};
+          3d7:
+            data_out = c{30b0, buttons_packed[7]};
+          default:
+            data_out = 32b0;
+        }
+
+      default: // Shut Alchitry Labs up
+        data_out = data_memory.read_data;
+    }
+
+    
+
+  }
+}

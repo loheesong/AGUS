@@ -1,0 +1,59 @@
+module multiplier #(
+  SIZE = 16 : SIZE <= 32
+) (
+    input a[SIZE],
+    input b[SIZE],
+    output mul[SIZE]
+  ) {
+  
+  // var row;
+  // var col;
+  // full_adder adders[SIZE * SIZE / 2];
+  // var current_row_first_col_index;
+  // var previous_row_first_col_index;
+
+  always {
+    // wheeeeee give up on actual implementation
+    mul = a * b;
+
+
+    // default values to silence errors 
+    // mul[0] = a[0] & b[0];
+    
+
+    // // first row inputs
+    // // previous row (A >> 1 & B[0]) values are added
+    // // to current row (A & B[1])
+    // for (col = 0; col < SIZE - 1; col++) {
+    //   adders.a[col] = a[col + 1] & b[0];
+    //   adders.b[col] = a[col] & b[1];
+
+    //   if (col == 0) {
+    //     adders.cin[col] = b0;
+    //   } else {
+    //     adders.cin[col] = adders.cout[col - 1];
+    //   }
+    // }
+    // mul[1] = adders.s[0];
+
+    // current_row_first_col_index = SIZE - 1;
+    // previous_row_first_col_index = 0;
+
+    // for (row = 2; row < SIZE; row++) {
+    //   for (col = 0; col < (SIZE - row); col++) {
+    //     adders.a[current_row_first_col_index + col] = a[col] & b[row];
+    //     adders.b[current_row_first_col_index + col] = adders.s[previous_row_first_col_index + col + 1];
+
+    //     if (col == 0) {
+    //       adders.cin[current_row_first_col_index + col] = b0;
+    //     } else {
+    //       adders.cin[current_row_first_col_index + col] = adders.cout[current_row_first_col_index + col - 1];
+    //     }
+    //   }
+
+    //   previous_row_first_col_index = current_row_first_col_index;
+    //   current_row_first_col_index = current_row_first_col_index + col;
+    //   mul[row] = adders.s[previous_row_first_col_index];
+    // }
+  }
+}

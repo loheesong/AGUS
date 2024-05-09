@@ -1,0 +1,133 @@
+fn_is_win:
+    PUSH(LP)	
+	PUSH(BP)	
+	MOVE(SP,BP)	
+	| PUSH all used registers
+	PUSH(R17)
+	PUSH(R18)
+	PUSH(R19)
+	PUSH(R20)
+	PUSH(R5)
+	PUSH(R6)
+	PUSH(R7)
+	PUSH(R8)
+	PUSH(R9)
+	PUSH(R10)
+	PUSH(R11)
+	PUSH(R12)
+    PUSH(R13)
+    PUSH(R14)
+    PUSH(R15)
+    PUSH(R16)
+
+    
+    ADDC(R31, 0, R18) | R18 contains i
+    ADDC(R31, 6, R19) | R19 contains 6
+
+    fn_is_win_check_while: | supposed to loop 6 times 
+        LD(R31, MAX_AMMO, R17) | R17 contains MAX_AMMO
+        CMPLT(R18, R19, R0) | check if i < 6
+        BEQ(R0, fn_is_win_finish_loop, R31)
+        MULC(R18, 3, R20) | R20 contains Ball
+        CMPLTC(R20, 9, R9) | R9 contains ball < 9
+        ADDC(R20, 1, R5) | R5 contains Ball + 1
+        ADDC(R20, 2, R6) | R5 contains Ball + 2
+        MULC(R20, 4, R20) | R20 is address of Ball
+        MULC(R5, 4, R5) | R5 is address of Ball + 1
+        MULC(R6, 4, R6) | R6 is address of Ball + 2
+
+        LD(R20, balls_info, R7) | R7 contains ball_x
+        LD(R5, balls_info, R8) | R8 contains ball_y
+
+        
+        XORC(R9, 1, R9) | R9 contains ball >= 9 aka player
+
+        MULC(R9, 2, R10) | R10 contains 2*player
+        ADDC(R31, 2, R11) | R11 contains 2
+        SUB(R11, R10, R10) | R10 contains other_player
+        MULC(R10, 2, R16) | R16 contains ammo_lives_other_i
+        ADDC(R10, 1, R11) | R11 contains other_player + 1
+        MULC(R10, 4, R10) | R10 contains the address of other_player
+        MULC(R11, 4, R11) | R11 contains the address of other_player + 1
+
+        LD(R10, players_pos, R10) | R10 contains other_playerx
+        LD(R11, players_pos, R11) | R11 contains other_playery
+
+        MULC(R9, 2, R12) | R12 contains ammo_lives_i
+
+        CMPEQ(R7, R10, R0) | Check ball_x == other_player
+        BEQ(R0, finish_if, R31) | First "if"
+
+        CMPLT(R8, R11, R13) | R13 contains ball_y < other_playery
+
+        LD(R31, PLAYER_LENGTH, R14) | R14 contains PLAYER_LENGTH
+        ADD(R11, R14, R14) | R14 contains other_playery + PLAYER_LENGTH
+        SUBC(R14, 1, R14) | R14 contains other_playery + PLAYER_LENGTH - 1
+        CMPLE(R8, R14, R14) | R14 contains ball_y <= other_playery + PLAYER_LENGTH - 1
+        XORC(R14, 1, R14) | R14 contains ball_y > other_playery + PLAYER_LENGTH - 1
+        OR(R13, R14, R13) | R13 contains the condition for 2nd if
+
+        BEQ(R13, fn_is_win_finish_2nd_if, R31) | Skip to finish_1st_if if the condition is not met
+
+        BEQ(R9, fn_is_win_p2_loses_life, R31) | p2 loses life if player == 0
+        SUBC(R2, 1, R2) | p1 lost 1 life
+        BEQ(R31, fn_is_win_finish_2nd_if, R31)
+
+        fn_is_win_p2_loses_life:
+            SUBC(R4, 1, R4) | p2 lost 1 life
+
+        fn_is_win_finish_2nd_if:
+        ADDC(R31, 32, R0) | R0 contains 32
+        ST(R0, balls_info, R20) | ballinfo x updated 
+        ST(R0, balls_info, R5) | ballinfo y updated 
+        ST(R0, balls_info, R6) | ballinfo c updated 
+
+        BEQ(R9, fn_is_win_p1ammo, R31) | if player == 0 then p1 regen ball
+        ADD(R31, R3, R15) | R15 is ammo of p1
+        BEQ(R31, fn_is_win_after_ammo, R31)
+
+        fn_is_win_p1ammo:
+            ADD(R31, R1, R15) | R15 is ammo of p2
+
+        fn_is_win_after_ammo:
+            SUBC(R17, 1, R17) | R17 contains MAX_AMMO - 1
+            CMPLE(R15, R17, R0) | Check ammo <= MAX_AMMO - 1
+            BEQ(R0, finish_if, R31) | Skip to end of if 
+            
+            BEQ(R9, fn_is_win_p1_regen, R31) | fn_is_win_p1_regen if player == 0
+            ADDC(R3, 1, R3) |p2 regen
+            BEQ(R31, finish_if, R31)
+
+            fn_is_win_p1_regen:
+                ADDC(R1, 1, R1) |p2 regen
+
+        finish_if:
+            ADDC(R18, 1, R18) | i ++
+            BEQ(R31, fn_is_win_check_while, R31) |looping
+
+    fn_is_win_finish_loop:
+        CMPEQC(R2, 0, R7) | contains ammo_lives_counter[1] == 0
+        CMPEQC(R4, 0, R8) | contains ammo_lives_counter[3] == 0
+        OR(R7, R8, R7) 
+        ST(R7, ISWIN, R31) | Store the bool
+
+        POP(R16)
+        POP(R15)
+        POP(R14)
+        POP(R13)
+        POP(R12)
+        POP(R11)
+        POP(R10)
+        POP(R9)
+        POP(R8)
+        POP(R7)
+        POP(R6)
+        POP(R5)
+        POP(R20)
+        POP(R19)
+        POP(R18)
+        POP(R17)
+        MOVE(BP,SP)
+        POP(BP)
+        POP(LP)
+        JMP(LP)

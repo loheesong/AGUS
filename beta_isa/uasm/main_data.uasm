@@ -1,0 +1,24 @@
+| starts at dec 0 - 17 (inclusive)th WORD***
+.=0x0
+balls_info:
+
+.=0x48 | dec 18 - 21 (inclusive) WORD 
+players_pos: | 4 elements
+
+.=0x58 | dec 22 - 29 (inclusive) WORD
+inputs:
+
+.=0x78 | dec 30 - 34 (inclusive) WORD
+||| my variables here 
+HEIGHT:
+    LONG(15)
+WIDTH:
+    LONG(30)
+PLAYER_LENGTH:
+    LONG(5)
+MAX_AMMO:
+    LONG(3)
+ISWIN:
+    LONG(0)
+
+.=0x8C | dec 35th WORD k = 35 for allocate
